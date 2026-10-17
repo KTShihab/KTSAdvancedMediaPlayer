@@ -1,0 +1,12 @@
+# Disable aggressive bytecode optimization that breaks audio pipelines and channel mixing
+-dontoptimize
+
+# AndroidX Media3 / ExoPlayer keep rules
+# Preserve all Media3 classes, interfaces, audio processors, decoders, and audio sinks to prevent R8 from stripping stereo audio pipeline
+-keep class androidx.media3.** { *; }
+-keep interface androidx.media3.** { *; }
+-dontwarn androidx.media3.**
+
+# Preserve audio effects and audio management classes
+-keep class android.media.audiofx.** { *; }
+-keep class android.media.** { *; }

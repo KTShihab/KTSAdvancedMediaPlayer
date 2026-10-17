@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_resume"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_resume"
+        android:shortcutShortLabel="@string/shortcut_resume_short"
+        android:shortcutLongLabel="@string/shortcut_resume_long">
+        <intent
+            android:action="com.example.ktsadvancedmediaplayer.action.RESUME_LAST"
+            android:targetPackage="com.example.ktsadvancedmediaplayer"
+            android:targetClass="com.example.ktsadvancedmediaplayer.MainActivity">
+            <extra android:name="shortcut_action" android:value="resume_last" />
+        </intent>
+        <categories android:name="android.intent.category.DEFAULT" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_bookshelf"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_bookshelf"
+        android:shortcutShortLabel="@string/shortcut_bookshelf_short"
+        android:shortcutLongLabel="@string/shortcut_bookshelf_long">
+        <intent
+            android:action="com.example.ktsadvancedmediaplayer.action.OPEN_BOOKSHELF"
+            android:targetPackage="com.example.ktsadvancedmediaplayer"
+            android:targetClass="com.example.ktsadvancedmediaplayer.MainActivity">
+            <extra android:name="shortcut_action" android:value="bookshelf" />
+        </intent>
+        <categories android:name="android.intent.category.DEFAULT" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_favorites"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_favorites"
+        android:shortcutShortLabel="@string/shortcut_favorites_short"
+        android:shortcutLongLabel="@string/shortcut_favorites_long">
+        <intent
+            android:action="com.example.ktsadvancedmediaplayer.action.OPEN_FAVORITES"
+            android:targetPackage="com.example.ktsadvancedmediaplayer"
+            android:targetClass="com.example.ktsadvancedmediaplayer.MainActivity">
+            <extra android:name="shortcut_action" android:value="favorites" />
+        </intent>
+        <categories android:name="android.intent.category.DEFAULT" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_history"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_history"
+        android:shortcutShortLabel="@string/shortcut_history_short"
+        android:shortcutLongLabel="@string/shortcut_history_long">
+        <intent
+            android:action="com.example.ktsadvancedmediaplayer.action.OPEN_HISTORY"
+            android:targetPackage="com.example.ktsadvancedmediaplayer"
+            android:targetClass="com.example.ktsadvancedmediaplayer.MainActivity">
+            <extra android:name="shortcut_action" android:value="history" />
+        </intent>
+        <categories android:name="android.intent.category.DEFAULT" />
+    </shortcut>
+</shortcuts>

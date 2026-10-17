@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom Accessibility Actions for Screen Readers (TalkBack, Jieshuo) -->
+    <item type="id" name="action_show_time_details" />
+    <item type="id" name="action_config_seek" />
+    <item type="id" name="action_view_bookmarks" />
+    <item type="id" name="action_show_file_options" />
+
+    <!-- File and Library Actions -->
+    <item type="id" name="action_file_play" />
+    <item type="id" name="action_file_browse_zip" />
+    <item type="id" name="action_file_pin" />
+    <item type="id" name="action_file_favorite" />
+    <item type="id" name="action_file_bookshelf" />
+    <item type="id" name="action_file_playlist" />
+    <item type="id" name="action_file_share" />
+    <item type="id" name="action_file_rename" />
+    <item type="id" name="action_file_delete" />
+    <item type="id" name="action_file_remove_from_lib" />
+    <item type="id" name="action_add_to_queue" />
+    <item type="id" name="action_view_queue" />
+
+    <!-- Forward & Rewind Seek Granular Actions -->
+    <item type="id" name="action_seek_fwd_5" />
+    <item type="id" name="action_seek_fwd_10" />
+    <item type="id" name="action_seek_fwd_30" />
+    <item type="id" name="action_seek_fwd_60" />
+    <item type="id" name="action_seek_fwd_300" />
+    <item type="id" name="action_seek_rwd_5" />
+    <item type="id" name="action_seek_rwd_10" />
+    <item type="id" name="action_seek_rwd_30" />
+    <item type="id" name="action_seek_rwd_60" />
+    <item type="id" name="action_seek_rwd_300" />
+    <item type="id" name="action_seek_configure" />
+
+    <!-- Bookmark Actions -->
+    <item type="id" name="action_bookmark_quick_save" />
+    <item type="id" name="action_bookmark_prompt_save" />
+    <item type="id" name="action_bookmark_view" />
+    <item type="id" name="action_bookmark_clear_track" />
+
+    <!-- Sleep Timer Actions -->
+    <item type="id" name="action_timer_dialog" />
+    <item type="id" name="action_timer_15" />
+    <item type="id" name="action_timer_30" />
+    <item type="id" name="action_timer_45" />
+    <item type="id" name="action_timer_60" />
+    <item type="id" name="action_timer_end_of_track" />
+    <item type="id" name="action_timer_cancel" />
+
+    <!-- Jump Actions -->
+    <item type="id" name="action_jump_details" />
+    <item type="id" name="action_jump_start" />
+    <item type="id" name="action_jump_25" />
+    <item type="id" name="action_jump_50" />
+    <item type="id" name="action_jump_75" />
+    <item type="id" name="action_jump_dialog" />
+
+    <!-- Play/Pause Actions -->
+    <item type="id" name="action_play_stop" />
+    <item type="id" name="action_play_restart" />
+    <item type="id" name="action_play_rewind_3" />
+
+    <!-- Track Navigation Actions -->
+    <item type="id" name="action_nav_next_track" />
+    <item type="id" name="action_nav_prev_track" />
+    <item type="id" name="action_nav_restart_track" />
+    <item type="id" name="action_nav_fwd_30" />
+    <item type="id" name="action_nav_rwd_30" />
+
+    <!-- Play Mode Actions -->
+    <item type="id" name="action_mode_set_all" />
+    <item type="id" name="action_mode_set_one" />
+    <item type="id" name="action_mode_set_repeat_all" />
+    <item type="id" name="action_mode_set_shuffle" />
+
+    <!-- Speed Actions -->
+    <item type="id" name="action_speed_set_10" />
+    <item type="id" name="action_speed_set_125" />
+    <item type="id" name="action_speed_set_15" />
+    <item type="id" name="action_speed_set_20" />
+    <item type="id" name="action_speed_set_075" />
+    <item type="id" name="action_speed_increase" />
+    <item type="id" name="action_speed_decrease" />
+    <item type="id" name="action_speed_dialog" />
+
+    <!-- Loop Actions -->
+    <item type="id" name="action_loop_set_a" />
+    <item type="id" name="action_loop_set_b" />
+    <item type="id" name="action_loop_cancel" />
+
+    <!-- Audio Separation / Route Actions -->
+    <item type="id" name="action_route_toggle_on" />
+    <item type="id" name="action_route_toggle_off" />
+
+    <!-- Ear Speaker Mode Actions -->
+    <item type="id" name="action_ear_mode_on" />
+    <item type="id" name="action_ear_mode_auto" />
+    <item type="id" name="action_ear_mode_off" />
+
+    <!-- Sort Actions -->
+    <item type="id" name="action_sort_order_az" />
+    <item type="id" name="action_sort_order_za" />
+    <item type="id" name="action_sort_order_date" />
+    <item type="id" name="action_sort_order_size" />
+    <item type="id" name="action_sort_dialog" />
+
+    <!-- Stream Actions -->
+    <item type="id" name="action_stream_play_clipboard" />
+    <item type="id" name="action_stream_open_dialog" />
+
+    <!-- Equalizer Actions -->
+    <item type="id" name="action_eq_turn_on" />
+    <item type="id" name="action_eq_turn_off" />
+    <item type="id" name="action_eq_reset_flat" />
+
+    <!-- Now Playing Display Actions -->
+    <item type="id" name="action_now_details" />
+    <item type="id" name="action_now_fav" />
+    <item type="id" name="action_now_bookshelf" />
+    <item type="id" name="action_now_playlist" />
+    <item type="id" name="action_now_share" />
+
+    <!-- Home Screen / Quick Shortcut Actions -->
+    <item type="id" name="action_resume_last" />
+    <item type="id" name="action_open_bookshelf" />
+    <item type="id" name="action_open_favorites" />
+    <item type="id" name="action_open_history" />
+
+    <!-- Playback Progress Slider Actions -->
+    <item type="id" name="action_slider_step_forward" />
+    <item type="id" name="action_slider_step_backward" />
+    <item type="id" name="action_slider_config_step" />
+
+    <!-- Folder Time & Details Actions -->
+    <item type="id" name="action_folder_time_details" />
+    <item type="id" name="action_file_resume_zip" />
+</resources>

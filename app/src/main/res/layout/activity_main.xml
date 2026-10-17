@@ -1,0 +1,1045 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:fitsSystemWindows="true">
+
+    <!-- Top Tab Bar -->
+    <LinearLayout
+        android:id="@+id/layoutTopTabBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#1E1E1E"
+        android:padding="8dp">
+
+        <Button
+            android:id="@+id/tabPlayer"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Player"
+            android:backgroundTint="#7C4DFF"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginEnd="6dp" />
+
+        <Button
+            android:id="@+id/tabLibrary"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Library"
+            android:backgroundTint="#2D2D2D"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginEnd="6dp" />
+
+        <Button
+            android:id="@+id/tabSettings"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Settings"
+            android:backgroundTint="#2D2D2D"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/tabContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- 1. Player Tab -->
+        <LinearLayout
+            android:id="@+id/containerPlayer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:visibility="visible">
+
+            <!-- Now Playing & Folder Header Card -->
+            <LinearLayout
+                android:id="@+id/cardNowPlaying"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/shape_rounded_card"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:id="@+id/tvNowPlaying"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Not Playing"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:ellipsize="middle"
+                    android:maxLines="2" />
+
+                <TextView
+                    android:id="@+id/tvCurrentFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📁 Folder: /storage/emulated/0"
+                    android:textColor="#90CAF9"
+                    android:textSize="13sp"
+                    android:paddingTop="5dp"
+                    android:background="?android:attr/selectableItemBackground" />
+
+                <Button
+                    android:id="@+id/btnResumeFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginTop="8dp"
+                    android:text="▶ Resume Folder Playback"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2E7D32"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Search Input Bar -->
+            <EditText
+                android:id="@+id/inputSearch"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:hint="🔍 Search files &amp; folders..."
+                android:textColorHint="#888888"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/shape_search_box"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:inputType="text"
+                android:textSize="14sp"
+                android:layout_marginBottom="6dp" />
+
+            <!-- Action Buttons Row (Equal weights, no clipping!) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp">
+
+                <Button
+                    android:id="@+id/btnSort"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="↕ Sort"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#37474F"
+                    android:textSize="13sp"
+                    android:textAllCaps="false"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnStream"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="🌐 Stream"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#4527A0"
+                    android:textSize="13sp"
+                    android:textAllCaps="false"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnQueue"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="📋 Queue (0)"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#00695C"
+                    android:textSize="13sp"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <!-- File List -->
+            <ListView
+                android:id="@+id/listViewFiles"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:divider="#262626"
+                android:dividerHeight="1dp" />
+
+            <!-- Playback Controls Panel -->
+            <LinearLayout
+                android:id="@+id/cardPlaybackControls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/shape_rounded_card"
+                android:padding="10dp"
+                android:layout_marginTop="6dp">
+
+                <!-- Playback Progress Slider Row -->
+                <LinearLayout
+                    android:id="@+id/layoutPlaybackProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="6dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <TextView
+                        android:id="@+id/tvCurrentProgressTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="00:00"
+                        android:textColor="#B0BEC5"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"
+                        android:importantForAccessibility="no" />
+
+                    <SeekBar
+                        android:id="@+id/seekBarPlayback"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:max="1000"
+                        android:progress="0"
+                        android:progressTint="#7C4DFF"
+                        android:thumbTint="#B388FF"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginEnd="6dp"
+                        android:focusable="true"
+                        android:contentDescription="Playback progress" />
+
+                    <TextView
+                        android:id="@+id/tvTotalProgressTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="00:00"
+                        android:textColor="#B0BEC5"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"
+                        android:importantForAccessibility="no" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnPlayMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="🔁 Mode: Play All"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2E2E2E"
+                    android:textSize="13sp"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <!-- Transport Controls Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="6dp">
+
+                    <Button
+                        android:id="@+id/btnRewind"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="⏪ 10s"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:padding="2dp"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnPrev"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="0.9"
+                        android:text="⏮ Prev"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:padding="2dp"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnPlay"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1.3"
+                        android:text="Play / Pause"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:backgroundTint="#7C4DFF"
+                        android:padding="2dp"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnNext"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="0.9"
+                        android:text="Next ⏭"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:padding="2dp"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnForward"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:text="10s ⏩"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:padding="2dp"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- Secondary Controls: Speed, Time, Loop, Bookmark -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="6dp">
+
+                    <Button
+                        android:id="@+id/btnSpeed"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:text="Speed"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnJump"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:text="Time"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnLoop"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:text="Loop"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="3dp" />
+
+                    <Button
+                        android:id="@+id/btnBookmark"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1.1"
+                        android:text="Bookmark"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D2D2D"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutBottomControls"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <Button
+                        android:id="@+id/btnAudioRoute"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Audio Separation: OFF"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2E2E2E"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:padding="2dp"
+                        android:layout_marginEnd="4dp" />
+
+                    <Button
+                        android:id="@+id/btnEarSpeakerMode"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Ear Speaker: OFF"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2E2E2E"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:padding="2dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 2. Library Tab -->
+        <LinearLayout
+            android:id="@+id/containerLibrary"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:visibility="gone">
+
+            <!-- Category Buttons (2x2 Grid) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="6dp">
+
+                <Button
+                    android:id="@+id/btnFav"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="⭐ Favorites"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#7C4DFF"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnBookShelf"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="📚 Bookshelf"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <Button
+                    android:id="@+id/btnHist"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="🕒 History"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnPlaylists"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="🎵 Playlists"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- Sub-Header & Breadcrumb Card -->
+            <LinearLayout
+                android:id="@+id/layoutLibHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/shape_rounded_card"
+                android:padding="10dp"
+                android:layout_marginBottom="8dp">
+
+                <Button
+                    android:id="@+id/btnLibBack"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="⬅ Back"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#37474F"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:visibility="gone"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/tvLibTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="⭐ Favorites"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:ellipsize="end"
+                    android:maxLines="1" />
+
+                <Button
+                    android:id="@+id/btnLibNew"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="+ New"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#4527A0"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:visibility="gone"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnClear"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Clear"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#37474F"
+                    android:textSize="12sp"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <!-- History Filter Row (Visible only when libraryMode == 0) -->
+            <LinearLayout
+                android:id="@+id/layoutHistoryFilter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btnHistFilterTracks"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="1"
+                    android:text="🎵 Tracks"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#7C4DFF"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btnHistFilterFolders"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="1"
+                    android:text="📁 Folders"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btnHistFilterPlaylists"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="1"
+                    android:text="🎶 Playlists"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textSize="12sp"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <!-- List and Empty State -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <ListView
+                    android:id="@+id/listViewLibrary"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:divider="#262626"
+                    android:dividerHeight="1dp" />
+
+                <TextView
+                    android:id="@+id/tvLibEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="No items found"
+                    android:textColor="#888888"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp"
+                    android:padding="24dp"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- 3. Settings Tab -->
+        <ScrollView
+            android:id="@+id/containerSettings"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="12dp"
+            android:paddingBottom="48dp"
+            android:clipToPadding="false"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- CATEGORY 0: APPEARANCE & THEMES -->
+                <TextView
+                    android:id="@+id/headerAppearance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🎨 Appearance &amp; Themes"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnAppTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="🎨 App Skin / Theme: 💜 Royal Violet"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#7C4DFF"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- CATEGORY 1: PLAYBACK & NAVIGATION -->
+                <TextView
+                    android:id="@+id/headerPlayback"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🎵 Playback &amp; Navigation"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnBgPlaybackToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Background Playback: ON"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnResumeToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Resume Playback: ON"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnAutoPlayNextFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Auto-Play Next Folder: OFF"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnFilterMediaFolders"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Show Media Folders Only: ON"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnSliderStepSetting"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Slider Step: 5%"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnSleepTimer"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Sleep Timer: OFF"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- CATEGORY 2: AUDIO EFFECTS & EQUALIZER -->
+                <TextView
+                    android:id="@+id/headerAudioEffects"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔊 Audio Effects &amp; Equalizer"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Volume Enhancer"
+                    android:textColor="#CCCCCC"
+                    android:textSize="15sp" />
+
+                <SeekBar
+                    android:id="@+id/seekLoudness"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="2000"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="12dp" />
+
+                <Button
+                    android:id="@+id/btnEqToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Equalizer: OFF"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <LinearLayout
+                    android:id="@+id/eqBandsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="6dp" />
+
+                <Button
+                    android:id="@+id/btnVirtualizerToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="3D Virtualizer: OFF"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="6dp" />
+
+                <SeekBar
+                    android:id="@+id/seekVirtualizer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="1000"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="12dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnSkipSilence"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Skip Silence: OFF"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnFadeConfig"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Fading Speed: Normal"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnGapConfig"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Track Gap: 0 Seconds"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- CATEGORY 3: VOLUME KEY SHORTCUTS -->
+                <TextView
+                    android:id="@+id/headerVolShortcuts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🎛️ Volume Key Shortcuts"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnVolShortcutsMasterToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Volume Key Shortcuts: ON"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#7C4DFF"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnScreenOffVolToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Screen-Off / Background Control: ON"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D2D2D"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnVolUpLong"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Vol UP (Long Press): Forward"
+                    android:backgroundTint="#262626"
+                    android:textColor="#FFFFFF"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnVolUpDouble"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Vol UP (Double Click): Next"
+                    android:backgroundTint="#262626"
+                    android:textColor="#FFFFFF"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnVolDownLong"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Vol DOWN (Long Press): Rewind"
+                    android:backgroundTint="#262626"
+                    android:textColor="#FFFFFF"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnVolDownDouble"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:text="Vol DOWN (Double Click): Prev"
+                    android:backgroundTint="#262626"
+                    android:textColor="#FFFFFF"
+                    android:textAllCaps="false"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- CATEGORY 4: STORAGE & CACHE MANAGEMENT -->
+                <TextView
+                    android:id="@+id/headerStorage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🧹 Storage &amp; Cache Management"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnClearZipCache"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Clear ZIP Cache (0 B)"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnClearSharedMediaCache"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Clear Shared Audio Cache (0 B)"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnClearAllCache"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#3A1C1C"
+                    android:text="Clear All Temporary Cache"
+                    android:textAllCaps="false"
+                    android:textColor="#FF8A80"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- CATEGORY 5: SHORTCUTS & INTEGRATIONS -->
+                <TextView
+                    android:id="@+id/headerShortcuts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📌 Shortcuts &amp; Integrations"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnPinResumeShortcut"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="📌 Pin 'Resume' to Home Screen"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnPinShelfShortcut"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="📌 Pin 'Book Shelf' to Home Screen"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnPinFavShortcut"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="📌 Pin 'Favorites' to Home Screen"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnPinHistShortcut"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="📌 Pin 'History' to Home Screen"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnDefaultAppLinks"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="🔗 Drive Link Settings"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- CATEGORY 6: APP UPDATES & GITHUB -->
+                <TextView
+                    android:id="@+id/headerUpdates"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🚀 App Updates (ഇൻ-ആപ്പ് അപ്‌ഡേറ്റുകൾ)"
+                    android:textColor="#BB86FC"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:accessibilityHeading="true"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/tvCurrentVersionInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Current Version: v1.0"
+                    android:textColor="#B0BEC5"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnCheckUpdate"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#7C4DFF"
+                    android:text="🔄 Check for Updates (അപ്‌ഡേറ്റുകൾ പരിശോധിക്കുക)"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnAutoCheckUpdateToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="Auto-check for updates: ON"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btnConfigGitHubRepo"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:backgroundTint="#2D2D2D"
+                    android:text="⚙️ GitHub Repository Configuration"
+                    android:textAllCaps="false"
+                    android:textColor="#B0BEC5"
+                    android:layout_marginBottom="36dp" />
+
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+</LinearLayout>

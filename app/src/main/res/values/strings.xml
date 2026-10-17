@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">KTS Advanced Media Player</string>
+    <string name="shortcut_resume_short">Resume</string>
+    <string name="shortcut_resume_long">Resume Last Played Track</string>
+    <string name="shortcut_bookshelf_short">Book Shelf</string>
+    <string name="shortcut_bookshelf_long">Open Book Shelf</string>
+    <string name="shortcut_favorites_short">Favorites</string>
+    <string name="shortcut_favorites_long">Open Favorites</string>
+    <string name="shortcut_history_short">History</string>
+    <string name="shortcut_history_long">Open History</string>
+</resources>
