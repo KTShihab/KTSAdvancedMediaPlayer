@@ -45,7 +45,7 @@ public class AppUpdateManager {
     private static final String KEY_AUTO_CHECK = "auto_check_updates_enabled";
     private static final String KEY_LAST_CHECK = "last_update_check_time_ms";
 
-    public static final String DEFAULT_REPO_SLUG = "Shiha/KTSAdvancedMediaPlayer";
+    public static final String DEFAULT_REPO_SLUG = "KTShihab/KTSAdvancedMediaPlayer";
 
     private static AppUpdateManager instance;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
