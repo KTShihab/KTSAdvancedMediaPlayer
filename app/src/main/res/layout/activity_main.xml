@@ -1027,16 +1027,6 @@
                     android:text="Auto-check for updates: ON"
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
-                    android:layout_marginBottom="6dp" />
-
-                <Button
-                    android:id="@+id/btnConfigGitHubRepo"
-                    android:layout_width="match_parent"
-                    android:layout_height="46dp"
-                    android:backgroundTint="#2D2D2D"
-                    android:text="⚙️ GitHub Repository Configuration"
-                    android:textAllCaps="false"
-                    android:textColor="#B0BEC5"
                     android:layout_marginBottom="36dp" />
 
             </LinearLayout>

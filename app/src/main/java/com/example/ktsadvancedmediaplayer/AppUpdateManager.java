@@ -61,15 +61,15 @@ public class AppUpdateManager {
     }
 
     public static String getRepoSlug(Context context) {
-        if (context == null) return DEFAULT_REPO_SLUG;
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        return prefs.getString(KEY_REPO_SLUG, DEFAULT_REPO_SLUG);
-    }
-
-    public static void setRepoSlug(Context context, String repoSlug) {
-        if (context == null || repoSlug == null) return;
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        prefs.edit().putString(KEY_REPO_SLUG, repoSlug.trim()).apply();
+        if (context != null) {
+            try {
+                SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+                if (prefs.contains(KEY_REPO_SLUG)) {
+                    prefs.edit().remove(KEY_REPO_SLUG).apply();
+                }
+            } catch (Exception ignored) {}
+        }
+        return DEFAULT_REPO_SLUG;
     }
 
     public static boolean isAutoCheckEnabled(Context context) {
@@ -154,7 +154,7 @@ public class AppUpdateManager {
                     mainHandler.post(() -> {
                         if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
                         if (isManualCheck && !activity.isFinishing()) {
-                            showConfigOrNoReleaseDialog(activity, repoSlug, "No releases published yet on repository: " + repoSlug);
+                            Toast.makeText(activity, "No releases found on GitHub.", Toast.LENGTH_SHORT).show();
                         }
                     });
                     return;
@@ -392,37 +392,6 @@ public class AppUpdateManager {
             Log.e(TAG, "Install launch failed", e);
             Toast.makeText(activity, "Install error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
-    }
-
-    public static void showRepositoryConfigDialog(Activity activity, Runnable onUpdated) {
-        if (activity == null) return;
-        EditText editText = new EditText(activity);
-        editText.setText(getRepoSlug(activity));
-        editText.setHint("owner/repository (e.g. Shiha/KTSAdvancedMediaPlayer)");
-
-        new AlertDialog.Builder(activity)
-                .setTitle("⚙️ GitHub Repository Settings")
-                .setMessage("Enter the GitHub repository (owner/repo) to fetch releases and updates from:\n\nഅപ്‌ഡേറ്റുകൾ പരിശോധിക്കേണ്ട GitHub repository പേര് നൽകുക:")
-                .setView(editText)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String text = editText.getText().toString().trim();
-                    if (!text.isEmpty()) {
-                        setRepoSlug(activity, text);
-                        Toast.makeText(activity, "Repository set to: " + text, Toast.LENGTH_SHORT).show();
-                        if (onUpdated != null) onUpdated.run();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showConfigOrNoReleaseDialog(Activity activity, String repoSlug, String errorMsg) {
-        new AlertDialog.Builder(activity)
-                .setTitle("ℹ️ GitHub Releases")
-                .setMessage(errorMsg + "\n\nDo you want to change or configure the GitHub repository (owner/repo)?")
-                .setPositiveButton("Change Repo", (dialog, which) -> showRepositoryConfigDialog(activity, null))
-                .setNegativeButton("Close", null)
-                .show();
     }
 
     /**

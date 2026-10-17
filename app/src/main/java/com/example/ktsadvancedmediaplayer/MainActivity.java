@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
     private View rootLayout;
     private Button btnAppTheme;
     private TextView headerAppearance, headerPlayback, headerAudioEffects, headerVolShortcuts, headerStorage, headerShortcuts, headerUpdates, tvCurrentVersionInfo;
-    private Button btnCheckUpdate, btnAutoCheckUpdateToggle, btnConfigGitHubRepo;
+    private Button btnCheckUpdate, btnAutoCheckUpdateToggle;
     private LinearLayout layoutTopTabBar, cardNowPlaying, cardPlaybackControls, layoutLibHeader;
     private int currentSelectedTab = 1;
 
@@ -5698,14 +5698,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        btnConfigGitHubRepo = findViewById(R.id.btnConfigGitHubRepo);
-        if (btnConfigGitHubRepo != null) {
-            updateConfigGitHubRepoUI();
-            btnConfigGitHubRepo.setOnClickListener(v -> {
-                AppUpdateManager.showRepositoryConfigDialog(MainActivity.this, this::updateConfigGitHubRepoUI);
-            });
-        }
-
         if (btnSleepTimer != null) {
             btnSleepTimer.setOnClickListener(v -> showSleepTimerDialog());
             updateSleepTimerUI();
@@ -9601,7 +9593,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (headerUpdates != null) headerUpdates.setTextColor(theme.headerColor);
         if (btnCheckUpdate != null) btnCheckUpdate.setBackgroundColor(theme.primaryColor);
-        if (btnConfigGitHubRepo != null) btnConfigGitHubRepo.setBackgroundColor(theme.buttonColor);
 
         updateResumeToggleUI();
         updateBgPlaybackToggleUI();
@@ -9612,7 +9603,6 @@ public class MainActivity extends AppCompatActivity {
         updateAudioSeparationButtonUI();
         updateEarSpeakerButtonUI();
         updateAutoCheckUpdateUI();
-        updateConfigGitHubRepoUI();
     }
 
     private void updateAutoCheckUpdateUI() {
@@ -9621,11 +9611,6 @@ public class MainActivity extends AppCompatActivity {
         ThemeManager.ThemeItem theme = ThemeManager.getCurrentTheme(this);
         btnAutoCheckUpdateToggle.setText(enabled ? "Auto-check for updates: ON" : "Auto-check for updates: OFF");
         btnAutoCheckUpdateToggle.setBackgroundColor(enabled ? theme.primaryColor : theme.buttonColor);
-    }
-
-    private void updateConfigGitHubRepoUI() {
-        if (btnConfigGitHubRepo == null) return;
-        btnConfigGitHubRepo.setText("⚙️ Repo: " + AppUpdateManager.getRepoSlug(this));
     }
 
     private void applyCardSurface(View view, int surfaceColor, int strokeColor) {
