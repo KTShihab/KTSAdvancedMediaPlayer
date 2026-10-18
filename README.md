@@ -2,7 +2,7 @@
 
 **KTS Advanced Media Player** is a powerful, lightweight, and fully accessible Android audio player designed with deep care for **Screen Reader (TalkBack) users** as well as all music and audiobook lovers.
 
-Every single button, slider, and list item has clear spoken labels, accessibility headings, and smart double-tap/long-press actions. The app works smoothly in the background, even with the screen turned off.
+Every button, slider, and list item has clear spoken labels, accessibility headings, and smart double-tap/long-press actions. The app works smoothly in the background, even with the screen turned off.
 
 ---
 
@@ -12,9 +12,9 @@ The app is organized into a clean, simple, and high-contrast layout:
 
 ### 1. Top Navigation Bar (3 Main Tabs)
 At the very top of the screen, you will always find three main tabs:
-* **Player Tab**: Your main music and media playback screen.
-* **Library Tab**: Quick access to your Favorites, Bookshelf, Play History, and Playlists.
-* **Settings Tab**: Sound effects, colorful themes, volume button controls, audio routing, and in-app updates.
+* **Player Tab**: Your main music and media playback screen with your storage files and full playback unit.
+* **Library Tab**: Quick access to your Favorites, Bookshelf, Play History, and custom Playlists.
+* **Settings Tab**: Sound effects, colorful themes, volume button gestures, cache tools, and in-app updates.
 
 ---
 
@@ -34,17 +34,23 @@ When you are on the **Player Tab**, the middle section displays your storage:
 
 ---
 
-### 3. Bottom Playback Controls
+### 3. Bottom Playback Controls (The Control Unit)
 
-At the bottom of the Player tab, you have a complete control panel:
+At the bottom of the Player tab, you have a complete playback unit:
 
 * **Now Playing Banner**:
   * Displays the title of the track currently playing and its folder.
+
 * **Main Transport Controls**:
   * **Play / Pause**: Start or pause audio playback.
   * **Previous Track**: Jump to the beginning of the track or to the previous track.
   * **Next Track**: Skip to the next track.
   * **Play Mode**: Switch between Sequential, Repeat All, Repeat One, and Shuffle.
+
+* **Seek Bar & Time**:
+  * Shows current elapsed time and total duration.
+  * Screen readers announce progress percentages and exact times as you slide.
+
 * **Fine Navigation & Audio Tools**:
   * **Rewind**: Jump back by a few seconds (step size can be configured: 5s, 10s, 30s, 1m).
   * **Forward**: Jump forward by a few seconds.
@@ -52,15 +58,20 @@ At the bottom of the Player tab, you have a complete control panel:
   * **Jump**: Opens a time dialog to jump directly to any exact minute and second in the track.
   * **Loop (A-B Repeat)**: Set a starting Point A and ending Point B to continuously loop a specific section of a song, speech, or lesson.
   * **Bookmark**:
-    * Tap to view all saved bookmarks in the folder or ZIP.
+    * Tap to view all saved bookmarks in the active folder or ZIP.
     * Double-tap and hold (Long-press) on the Bookmark button to **Quick Save** your current position instantly without typing.
-    * In the Bookmark list, **double-tap and hold on any bookmark** to delete it.
+    * In the Bookmark list, **double-tap and hold on any bookmark** to delete that bookmark.
     * Tap **"Delete a Bookmark"** to turn on checkboxes (ticks) and delete multiple bookmarks together in one click.
     * Use **"Clear All Bookmarks"** to wipe all saved marks in the active folder or ZIP.
-* **Progress Bar (SeekBar)**:
-  * Shows current elapsed time and total duration.
-  * Screen readers announce progress percentages and exact times as you slide.
-  * **Slider Step Button**: Change slider seek sensitivity (1%, 2%, 5%, or 10% per swipe).
+
+* **Bottom Audio Routing Controls (Located directly at the bottom of the playback unit)**:
+  * **Audio Separation (Screen Reader Friendly)**:
+    * Tap to toggle ON or OFF.
+    * When turned ON, your media playback plays smoothly through your connected Bluetooth speaker or headset, while your TalkBack screen reader speaks through the phone's built-in loudspeaker without clashing!
+  * **Ear-Speaker Mode**:
+    * Tap to cycle between **OFF**, **ON**, and **AUTO**.
+    * In **AUTO** mode, when you bring the phone near your ear, the proximity sensor automatically switches the sound to the phone's ear speaker (handset receiver) and turns the screen dark to avoid accidental touches. Moving it away switches back to loudspeaker.
+    * In **ON** mode, sound always plays through the ear speaker for private listening.
 
 ---
 
@@ -77,7 +88,7 @@ The Library tab organizes your audio collection into four top cards:
 
 ## ⚙️ The Settings Tab
 
-The Settings tab is divided into organized categories:
+The Settings tab is divided into clear, organized categories:
 
 ### 🎨 1. Appearance & Themes (Skins)
 Choose from **6 vibrant, high-contrast themes** designed for maximum visibility:
@@ -88,14 +99,13 @@ Choose from **6 vibrant, high-contrast themes** designed for maximum visibility:
 5. 💖 **Neon Synthwave** (Vibrant cyber pink and magenta)
 6. 🖤 **AMOLED Pure Dark** (Pitch black with crisp silver text for battery saving)
 
-### 🎵 2. Playback Behavior & Audio Routing
-* **Resume Last Played on Launch**: Automatically continues playing from where you last stopped when you open the app.
+### 🎵 2. Playback & Navigation
 * **Background Playback**: Keep music playing while using other apps or with the screen locked.
-* **Ear-Speaker Mode**: Switch sound to the phone's ear speaker (handset receiver) when you bring the phone close to your ear (using proximity sensor), or force ear-speaker playback for privacy.
-* **Audio Separation (Screen Reader Friendly)**:
-  * When using a Bluetooth speaker or headset, your media content plays smoothly through Bluetooth, while your TalkBack screen reader stays on the phone's built-in speaker without clashing!
+* **Resume Playback**: Automatically continues playing from where you last stopped when you launch the app.
 * **Auto-Play Next Folder**: Automatically jumps to the next folder when the current folder finishes.
-* **Filter Media Folders**: Automatically hides non-audio folders (like camera pictures, DCIM, documents) so your library remains clean.
+* **Show Media Folders Only**: Automatically hides non-audio folders (like camera pictures, DCIM, documents) so your library remains clean.
+* **Slider Step Setting**: Change slider seek sensitivity (1%, 2%, 5%, or 10% per swipe).
+* **Sleep Timer**: Automatically stops playback after a set time or at the end of the current track.
 
 ### 🎚️ 3. Audio Effects & Enhancements
 * **Volume Booster (Loudness Enhancer)**: Boost audio volume up to 4000 mB for quiet recordings or low-volume voice files.
