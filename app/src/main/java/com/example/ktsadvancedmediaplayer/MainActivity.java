@@ -7012,7 +7012,7 @@ public class MainActivity extends AppCompatActivity {
                 actionItems.add(() -> jumpToBookmark(bm));
             }
 
-            displayItems.add("🗑️ Delete a Bookmark...");
+            displayItems.add("🗑️ Delete a Bookmark (Select / Tick)...");
             actionItems.add(() -> showDeleteBookmarkDialog(finalScopePath, finalIsZip, bookmarks));
 
             displayItems.add("🧹 Clear All Bookmarks in this " + (finalIsZip ? "ZIP" : "Folder"));
@@ -7024,7 +7024,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        new AlertDialog.Builder(this)
+        AlertDialog bookmarkDialog = new AlertDialog.Builder(this)
                 .setTitle("📑 Bookmarks: " + finalScopeTitle)
                 .setItems(displayItems.toArray(new String[0]), (d, which) -> {
                     if (which >= 0 && which < actionItems.size()) {
@@ -7035,7 +7035,33 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .setNegativeButton("Close", null)
-                .show();
+                .create();
+
+        bookmarkDialog.setOnShowListener(dialogInterface -> {
+            ListView lv = bookmarkDialog.getListView();
+            if (lv != null) {
+                lv.setOnItemLongClickListener((parent, view, position, id) -> {
+                    int startBmIdx = canAdd ? 2 : 0;
+                    if (position >= startBmIdx && position < startBmIdx + bookmarks.size()) {
+                        MediaBookmarkItem bmToDelete = bookmarks.get(position - startBmIdx);
+                        new AlertDialog.Builder(MainActivity.this)
+                                .setTitle("🗑️ Delete Bookmark?")
+                                .setMessage("Delete bookmark \"" + bmToDelete.bookmarkTitle + "\" (" + formatTime((int) bmToDelete.positionMs) + ") in " + bmToDelete.trackName + "?\nഈ ബുക്ക്‌മാർക്ക് ഡിലീറ്റ് ചെയ്യണമെന്ന് ഉറപ്പാണോ?")
+                                .setPositiveButton("Delete", (d, w) -> {
+                                    deleteBookmark(bmToDelete);
+                                    bookmarkDialog.dismiss();
+                                    showBookmarksDialogForScope(finalScopePath, finalIsZip, finalScopeTitle);
+                                })
+                                .setNegativeButton("Cancel", null)
+                                .show();
+                        return true;
+                    }
+                    return false;
+                });
+            }
+        });
+
+        bookmarkDialog.show();
     }
 
     private List<MediaBookmarkItem> getBookmarksForScope(String scopePath, boolean isZip) {
@@ -7156,24 +7182,93 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "No bookmarks to delete", Toast.LENGTH_SHORT).show();
             return;
         }
+
         String[] titles = new String[bookmarks.size()];
+        boolean[] checkedItems = new boolean[bookmarks.size()];
+
         for (int i = 0; i < bookmarks.size(); i++) {
             MediaBookmarkItem b = bookmarks.get(i);
-            titles[i] = b.trackName + " • " + b.bookmarkTitle + " (" + formatTime((int) b.positionMs) + ")";
+            titles[i] = "🔖 " + b.trackName + " • " + b.bookmarkTitle + " (" + formatTime((int) b.positionMs) + ")";
         }
-        new AlertDialog.Builder(this)
-                .setTitle("Select Bookmark to Delete")
-                .setItems(titles, (dialog, which) -> {
-                    MediaBookmarkItem toDelete = bookmarks.get(which);
-                    new AlertDialog.Builder(this)
-                            .setTitle("Delete Bookmark?")
-                            .setMessage("Delete \"" + toDelete.bookmarkTitle + "\" in " + toDelete.trackName + "?")
-                            .setPositiveButton("Delete", (d, w) -> deleteBookmark(toDelete))
-                            .setNegativeButton("Cancel", null)
-                            .show();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("🗑️ Delete Bookmarks (Tick to select)")
+                .setMultiChoiceItems(titles, checkedItems, (dialogInterface, which, isChecked) -> {
+                    checkedItems[which] = isChecked;
+                    AlertDialog ad = (AlertDialog) dialogInterface;
+                    Button btnDel = ad.getButton(AlertDialog.BUTTON_POSITIVE);
+                    if (btnDel != null) {
+                        int selCount = 0;
+                        for (boolean c : checkedItems) if (c) selCount++;
+                        btnDel.setText(selCount > 0 ? "Delete (" + selCount + ")" : "Delete");
+                    }
                 })
-                .setNegativeButton("Cancel", null)
-                .show();
+                .setPositiveButton("Delete", null)
+                .setNeutralButton("Select All", null)
+                .setNegativeButton("Cancel", null);
+
+        AlertDialog multiDialog = builder.create();
+        multiDialog.show();
+
+        Button btnDelete = multiDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (btnDelete != null) {
+            btnDelete.setOnClickListener(v -> {
+                List<MediaBookmarkItem> toDelete = new ArrayList<>();
+                for (int i = 0; i < checkedItems.length; i++) {
+                    if (checkedItems[i]) {
+                        toDelete.add(bookmarks.get(i));
+                    }
+                }
+
+                if (toDelete.isEmpty()) {
+                    Toast.makeText(this, "Please tick at least one bookmark to delete.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                new AlertDialog.Builder(this)
+                        .setTitle("Delete " + toDelete.size() + " Bookmark(s)?")
+                        .setMessage("Are you sure you want to delete " + toDelete.size() + " selected bookmark(s)?\nതിരഞ്ഞെടുത്ത " + toDelete.size() + " ബുക്ക്‌മാർക്കുകൾ ഡിലീറ്റ് ചെയ്യണമെന്ന് ഉറപ്പാണോ?")
+                        .setPositiveButton("Delete", (dialog, which) -> {
+                            for (MediaBookmarkItem item : toDelete) {
+                                deleteBookmarkInternal(item);
+                            }
+                            String msg = toDelete.size() + " bookmark(s) deleted";
+                            announceAccessibility(msg);
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                            multiDialog.dismiss();
+                            showBookmarksDialogForScope(scopePath, isZip, null);
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        }
+
+        Button btnNeutral = multiDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+        if (btnNeutral != null) {
+            btnNeutral.setOnClickListener(v -> {
+                boolean allSelected = true;
+                for (boolean c : checkedItems) {
+                    if (!c) {
+                        allSelected = false;
+                        break;
+                    }
+                }
+
+                boolean newState = !allSelected;
+                for (int i = 0; i < checkedItems.length; i++) {
+                    checkedItems[i] = newState;
+                    if (multiDialog.getListView() != null) {
+                        multiDialog.getListView().setItemChecked(i, newState);
+                    }
+                }
+
+                btnNeutral.setText(newState ? "Deselect All" : "Select All");
+                if (btnDelete != null) {
+                    int count = newState ? checkedItems.length : 0;
+                    btnDelete.setText(count > 0 ? "Delete (" + count + ")" : "Delete");
+                }
+            });
+        }
     }
 
     private void confirmClearAllBookmarks(String scopePath, boolean isZip, String scopeTitle) {
@@ -7185,7 +7280,7 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void deleteBookmark(MediaBookmarkItem item) {
+    private void deleteBookmarkInternal(MediaBookmarkItem item) {
         if (item == null) return;
         if (item.isZip) {
             String permKey = "ZIP_BM:" + item.zipPath + "::" + item.trackName;
@@ -7205,8 +7300,13 @@ public class MainActivity extends AppCompatActivity {
                 removeEntryFromKey(fullPath, item.positionMs);
             }
         }
+    }
+
+    private void deleteBookmark(MediaBookmarkItem item) {
+        if (item == null) return;
+        deleteBookmarkInternal(item);
         announceAccessibility("Bookmark deleted: " + item.bookmarkTitle);
-        Toast.makeText(this, "Bookmark deleted", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Bookmark deleted: " + item.bookmarkTitle, Toast.LENGTH_SHORT).show();
     }
 
     private void removeEntryFromKey(String key, long positionMs) {
