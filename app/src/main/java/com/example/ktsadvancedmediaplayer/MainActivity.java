@@ -139,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
     private long lastPeriodicSaveTime = 0;
     private EditText inputSearch;
     private Button btnSort, btnStream, btnQueue, btnPlayMode, btnPrev, btnPlay, btnNext;
+    private Button btnPrevFolder, btnNextFolder;
     private Button btnRewind, btnForward, btnSpeed, btnJump, btnLoop, btnBookmark;
     private SeekBar seekBarPlayback;
     private TextView tvCurrentProgressTime, tvTotalProgressTime;
@@ -257,6 +258,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private final List<QueueItem> playQueue = new ArrayList<>();
+    private boolean isPlayingFromQueue = false;
+    private boolean isInternalQueuePlayback = false;
+    private List<String> savedFolderPlaylist = null;
+    private int savedFolderNextIndex = -1;
+    private String savedFolderDir = null;
+    private String savedZipFilePath = null;
+    private String savedZipName = null;
+    private String savedDriveFolderUrl = null;
+    private String savedDriveFolderName = null;
 
     private final List<String> globalAudioNames = new ArrayList<>();
     private final List<String> globalAudioPaths = new ArrayList<>();
@@ -1057,6 +1067,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         btnPlayMode = findViewById(R.id.btnPlayMode);
+        btnPrevFolder = findViewById(R.id.btnPrevFolder);
+        btnNextFolder = findViewById(R.id.btnNextFolder);
+        if (btnPrevFolder != null) {
+            btnPrevFolder.setOnClickListener(v -> playPreviousFolder());
+        }
+        if (btnNextFolder != null) {
+            btnNextFolder.setOnClickListener(v -> playNextFolder());
+        }
         btnPrev = findViewById(R.id.btnPrev);
         btnPlay = findViewById(R.id.btnPlay);
         btnNext = findViewById(R.id.btnNext);
@@ -2936,6 +2954,17 @@ public class MainActivity extends AppCompatActivity {
                         onSleepTimerTriggered();
                         return;
                     }
+
+                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && !playQueue.isEmpty() && !isPlayingFromQueue) {
+                        int nextTrackIdx = (mediaPlayer != null) ? mediaPlayer.getCurrentMediaItemIndex() : -1;
+                        saveFolderPlaybackContext(nextTrackIdx);
+                        if (mediaPlayer != null) {
+                            mediaPlayer.stop();
+                        }
+                        if (playNextQueueItem()) {
+                            return;
+                        }
+                    }
                     currentPlayingFile = mediaItem.localConfiguration.uri.getPath();
                     if (currentPlayingFile == null) currentPlayingFile = mediaItem.localConfiguration.uri.toString();
 
@@ -3050,6 +3079,10 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     if (playNextQueueItem()) {
+                        return;
+                    }
+
+                    if (resumeSavedFolderPlayback()) {
                         return;
                     }
 
@@ -3213,19 +3246,95 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+    private void saveFolderPlaybackContext(int nextIndex) {
+        if (!isPlayingFromQueue) {
+            savedFolderPlaylist = new ArrayList<>(currentAudioList);
+            savedFolderNextIndex = nextIndex;
+            savedFolderDir = currentDir;
+            savedZipFilePath = currentZipFilePath;
+            savedZipName = currentZipName;
+            savedDriveFolderUrl = currentDriveFolderUrl;
+            savedDriveFolderName = currentDriveFolderName;
+            isPlayingFromQueue = true;
+        }
+    }
+
+    private boolean resumeSavedFolderPlayback() {
+        if (!isPlayingFromQueue || savedFolderPlaylist == null || savedFolderPlaylist.isEmpty()) {
+            isPlayingFromQueue = false;
+            savedFolderPlaylist = null;
+            savedFolderNextIndex = -1;
+            return false;
+        }
+
+        List<String> resumeList = new ArrayList<>(savedFolderPlaylist);
+        int resumeIdx = savedFolderNextIndex;
+        String resumeDir = savedFolderDir;
+        String resumeZipPath = savedZipFilePath;
+        String resumeZipTitle = savedZipName;
+        String resumeDriveUrl = savedDriveFolderUrl;
+        String resumeDriveTitle = savedDriveFolderName;
+
+        isPlayingFromQueue = false;
+        savedFolderPlaylist = null;
+        savedFolderNextIndex = -1;
+        savedFolderDir = null;
+        savedZipFilePath = null;
+        savedZipName = null;
+        savedDriveFolderUrl = null;
+        savedDriveFolderName = null;
+
+        if (resumeIdx < 0 || resumeIdx >= resumeList.size()) {
+            announceAccessibility("Queue finished. Folder playback ended.");
+            return false;
+        }
+
+        currentAudioList.clear();
+        currentAudioList.addAll(resumeList);
+        if (resumeDir != null) currentDir = resumeDir;
+        if (resumeZipPath != null && !resumeZipPath.isEmpty()) {
+            isBrowsingZip = true;
+            currentZipFilePath = resumeZipPath;
+            currentZipName = resumeZipTitle != null ? resumeZipTitle : "";
+        }
+        if (resumeDriveUrl != null && !resumeDriveUrl.isEmpty()) {
+            isBrowsingDrive = true;
+            currentDriveFolderUrl = resumeDriveUrl;
+            currentDriveFolderName = resumeDriveTitle != null ? resumeDriveTitle : "";
+        }
+
+        String nextTrack = currentAudioList.get(resumeIdx);
+        String trackName = new File(nextTrack).getName();
+        announceAccessibility("Queue finished. Resuming folder: " + trackName);
+        Toast.makeText(this, "Resuming folder: " + trackName, Toast.LENGTH_SHORT).show();
+
+        isInternalQueuePlayback = true;
+        try {
+            executePlayAudioFile(nextTrack);
+        } finally {
+            isInternalQueuePlayback = false;
+        }
+        return true;
+    }
+
     private void playQueueItemDirectly(QueueItem item) {
         if (item == null) return;
-        if (item.type == QueueItem.TYPE_TRACK) {
-            announceAccessibility("Playing from queue: " + item.title);
-            currentAudioList.clear();
-            currentAudioList.add(item.path);
-            playAudioFile(item.path);
-        } else if (item.type == QueueItem.TYPE_FOLDER) {
-            announceAccessibility("Playing folder from queue: " + item.title);
-            playFolderTracks(new File(item.path), 0);
-        } else if (item.type == QueueItem.TYPE_ZIP) {
-            announceAccessibility("Playing ZIP from queue: " + item.title);
-            playZipFile(new File(item.path), 0);
+        isInternalQueuePlayback = true;
+        try {
+            if (item.type == QueueItem.TYPE_TRACK) {
+                announceAccessibility("Playing from queue: " + item.title);
+                currentAudioList.clear();
+                currentAudioList.add(item.path);
+                executePlayAudioFile(item.path);
+            } else if (item.type == QueueItem.TYPE_FOLDER) {
+                announceAccessibility("Playing folder from queue: " + item.title);
+                playFolderTracks(new File(item.path), 0);
+            } else if (item.type == QueueItem.TYPE_ZIP) {
+                announceAccessibility("Playing ZIP from queue: " + item.title);
+                playZipFile(new File(item.path), 0);
+            }
+        } finally {
+            isInternalQueuePlayback = false;
         }
     }
 
@@ -3257,6 +3366,16 @@ public class MainActivity extends AppCompatActivity {
             announceAccessibility("Folder not found");
             return;
         }
+        if (!isInternalQueuePlayback) {
+            isPlayingFromQueue = false;
+            savedFolderPlaylist = null;
+            savedFolderNextIndex = -1;
+            savedFolderDir = null;
+            savedZipFilePath = null;
+            savedZipName = null;
+            savedDriveFolderUrl = null;
+            savedDriveFolderName = null;
+        }
         List<File> audioFiles = getAudioFilesInFolder(folder);
         if (audioFiles.isEmpty()) {
             announceAccessibility("No audio tracks found in " + folder.getName());
@@ -3272,52 +3391,123 @@ public class MainActivity extends AppCompatActivity {
         executePlayAudioFile(audioFiles.get(idx).getAbsolutePath());
     }
 
-    private boolean playNextSiblingFolder() {
-        File currentFolder = null;
-        if (currentDir != null && !currentDir.isEmpty() && !"STORAGE_ROOT".equals(currentDir)) {
-            currentFolder = new File(currentDir);
-        } else if (currentPlayingFile != null && !currentPlayingFile.isEmpty()) {
-            currentFolder = new File(currentPlayingFile).getParentFile();
+    private File getCurrentActiveFolderContainer() {
+        if (currentZipFilePath != null && !currentZipFilePath.isEmpty()) {
+            return new File(currentZipFilePath);
         }
-        if (currentFolder == null || !currentFolder.exists() || !currentFolder.isDirectory()) {
-            return false;
-        }
-        File parentFolder = currentFolder.getParentFile();
-        if (parentFolder == null || !parentFolder.exists() || !parentFolder.isDirectory()) {
-            return false;
-        }
-        File[] siblings = parentFolder.listFiles();
-        if (siblings == null || siblings.length == 0) return false;
-
-        List<File> subfolders = new ArrayList<>();
-        for (File f : siblings) {
-            if (f.isDirectory() && !f.isHidden()) {
-                subfolders.add(f);
+        if (currentDir != null && !currentDir.isEmpty() && !"STORAGE_ROOT".equals(currentDir) && !currentDir.startsWith("gdrive://")) {
+            File f = new File(currentDir);
+            if (f.exists() && f.isDirectory()) {
+                return f;
             }
         }
-        subfolders.sort((f1, f2) -> ZipMediaManager.NATURAL_ORDER_COMPARATOR.compare(f1.getName(), f2.getName()));
+        if (currentPlayingFile != null && !currentPlayingFile.isEmpty() && !currentPlayingFile.startsWith("http")) {
+            File parent = new File(currentPlayingFile).getParentFile();
+            if (parent != null && parent.exists() && parent.isDirectory()) {
+                return parent;
+            }
+        }
+        return null;
+    }
 
+    private List<File> getPlayableSiblingContainers(File current) {
+        List<File> result = new ArrayList<>();
+        if (current == null) return result;
+        File parent = current.getParentFile();
+        if (parent == null || !parent.exists() || !parent.isDirectory()) return result;
+        File[] siblings = parent.listFiles();
+        if (siblings == null || siblings.length == 0) return result;
+
+        for (File f : siblings) {
+            if (f.isHidden()) continue;
+            if (f.isDirectory()) {
+                if (!getAudioFilesInFolder(f).isEmpty() || folderContainsSupportedMedia(f)) {
+                    result.add(f);
+                }
+            } else if (ZipMediaManager.isZipFile(f.getName())) {
+                result.add(f);
+            }
+        }
+        result.sort((f1, f2) -> ZipMediaManager.NATURAL_ORDER_COMPARATOR.compare(f1.getName(), f2.getName()));
+        return result;
+    }
+
+    private boolean playFolderOrZip(File container) {
+        if (container == null || !container.exists()) return false;
+        if (ZipMediaManager.isZipFile(container.getName())) {
+            announceAccessibility("Playing archive: " + container.getName());
+            Toast.makeText(this, "Archive: " + container.getName(), Toast.LENGTH_SHORT).show();
+            playZipFile(container, 0);
+            return true;
+        } else if (container.isDirectory()) {
+            announceAccessibility("Playing folder: " + container.getName());
+            Toast.makeText(this, "Folder: " + container.getName(), Toast.LENGTH_SHORT).show();
+            playFolderTracks(container, 0);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean playNextFolder() {
+        File current = getCurrentActiveFolderContainer();
+        if (current == null) {
+            announceAccessibility("No active folder");
+            Toast.makeText(this, "No active folder", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        List<File> siblings = getPlayableSiblingContainers(current);
+        if (siblings.isEmpty()) {
+            announceAccessibility("No sibling folders found");
+            Toast.makeText(this, "No sibling folders found", Toast.LENGTH_SHORT).show();
+            return false;
+        }
         int currentIndex = -1;
-        for (int i = 0; i < subfolders.size(); i++) {
-            if (subfolders.get(i).getAbsolutePath().equals(currentFolder.getAbsolutePath())) {
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings.get(i).getAbsolutePath().equals(current.getAbsolutePath())) {
                 currentIndex = i;
                 break;
             }
         }
+        if (currentIndex != -1 && currentIndex + 1 < siblings.size()) {
+            return playFolderOrZip(siblings.get(currentIndex + 1));
+        } else {
+            announceAccessibility("No next folder available");
+            Toast.makeText(this, "No next folder available", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
 
-        if (currentIndex != -1) {
-            for (int i = currentIndex + 1; i < subfolders.size(); i++) {
-                File candidate = subfolders.get(i);
-                List<File> tracks = getAudioFilesInFolder(candidate);
-                if (!tracks.isEmpty()) {
-                    announceAccessibility("Auto-playing next folder: " + candidate.getName());
-                    Toast.makeText(this, "Next folder: " + candidate.getName(), Toast.LENGTH_SHORT).show();
-                    playFolderTracks(candidate, 0);
-                    return true;
-                }
+    private boolean playPreviousFolder() {
+        File current = getCurrentActiveFolderContainer();
+        if (current == null) {
+            announceAccessibility("No active folder");
+            Toast.makeText(this, "No active folder", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        List<File> siblings = getPlayableSiblingContainers(current);
+        if (siblings.isEmpty()) {
+            announceAccessibility("No sibling folders found");
+            Toast.makeText(this, "No sibling folders found", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        int currentIndex = -1;
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings.get(i).getAbsolutePath().equals(current.getAbsolutePath())) {
+                currentIndex = i;
+                break;
             }
         }
-        return false;
+        if (currentIndex > 0) {
+            return playFolderOrZip(siblings.get(currentIndex - 1));
+        } else {
+            announceAccessibility("No previous folder available");
+            Toast.makeText(this, "No previous folder available", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
+
+    private boolean playNextSiblingFolder() {
+        return playNextFolder();
     }
 
     public ExoPlayer getMediaPlayer() {
@@ -6280,6 +6470,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 9. Play Mode Button
+        if (btnPrevFolder != null) {
+            ViewCompat.setAccessibilityDelegate(btnPrevFolder, new AccessibilityDelegateCompat() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            AccessibilityNodeInfoCompat.ACTION_CLICK, "Play previous folder"));
+                }
+            });
+        }
+        if (btnNextFolder != null) {
+            ViewCompat.setAccessibilityDelegate(btnNextFolder, new AccessibilityDelegateCompat() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            AccessibilityNodeInfoCompat.ACTION_CLICK, "Play next folder"));
+                }
+            });
+        }
         if (btnPlayMode != null) {
             ViewCompat.setAccessibilityDelegate(btnPlayMode, new AccessibilityDelegateCompat() {
                 @Override
@@ -7727,6 +7937,29 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnNext.setOnClickListener(v -> {
+            if (!playQueue.isEmpty()) {
+                if (!isPlayingFromQueue) {
+                    int nextTrackIdx = (mediaPlayer != null) ? mediaPlayer.getCurrentMediaItemIndex() + 1 : -1;
+                    saveFolderPlaybackContext(nextTrackIdx);
+                }
+                if (mediaPlayer != null && mediaPlayer.isPlaying() && currentFadeMultiplier > 0) {
+                    fadeAudio(-1f, 0.0f, 200, () -> {
+                        if (mediaPlayer != null) mediaPlayer.stop();
+                        playNextQueueItem();
+                    });
+                } else {
+                    if (mediaPlayer != null) mediaPlayer.stop();
+                    playNextQueueItem();
+                }
+                return;
+            }
+
+            if (isPlayingFromQueue && playQueue.isEmpty()) {
+                if (resumeSavedFolderPlayback()) {
+                    return;
+                }
+            }
+
             if (mediaPlayer != null && mediaPlayer.hasNextMediaItem()) {
                 if (mediaPlayer.isPlaying() && currentFadeMultiplier > 0) {
                     fadeAudio(-1f, 0.0f, 250, () -> {
@@ -7751,6 +7984,8 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 if (playNextQueueItem()) {
                     // Next queue item played
+                } else if (resumeSavedFolderPlayback()) {
+                    // Resumed saved folder
                 } else if (bkPrefs.getBoolean("auto_play_next_folder", false) && playNextSiblingFolder()) {
                     // Auto-played next folder
                 } else {
@@ -8726,6 +8961,16 @@ public class MainActivity extends AppCompatActivity {
     private void executePlayAudioFile(String path, long targetSeekMs) {
         try {
             saveCurrentPosition();
+            if (!isInternalQueuePlayback) {
+                isPlayingFromQueue = false;
+                savedFolderPlaylist = null;
+                savedFolderNextIndex = -1;
+                savedFolderDir = null;
+                savedZipFilePath = null;
+                savedZipName = null;
+                savedDriveFolderUrl = null;
+                savedDriveFolderName = null;
+            }
             if (!isBrowsingZip && !isBrowsingDrive) {
                 currentZipName = "";
                 currentZipFilePath = "";
@@ -9056,6 +9301,16 @@ public class MainActivity extends AppCompatActivity {
     private void executePlayZipTracks(String zipName, String zipPath, List<File> tracks, int startIndex, long targetSeekMs) {
         try {
             saveCurrentPosition();
+            if (!isInternalQueuePlayback) {
+                isPlayingFromQueue = false;
+                savedFolderPlaylist = null;
+                savedFolderNextIndex = -1;
+                savedFolderDir = null;
+                savedZipFilePath = null;
+                savedZipName = null;
+                savedDriveFolderUrl = null;
+                savedDriveFolderName = null;
+            }
             currentZipName = zipName;
             currentZipFilePath = zipPath;
 
@@ -9656,6 +9911,8 @@ public class MainActivity extends AppCompatActivity {
         if (btnRewind != null) btnRewind.setBackgroundColor(theme.buttonColor);
         if (btnForward != null) btnForward.setBackgroundColor(theme.buttonColor);
         if (btnPlayMode != null) btnPlayMode.setBackgroundColor(theme.buttonColor);
+        if (btnPrevFolder != null) btnPrevFolder.setBackgroundColor(theme.buttonColor);
+        if (btnNextFolder != null) btnNextFolder.setBackgroundColor(theme.buttonColor);
         if (btnSpeed != null) btnSpeed.setBackgroundColor(theme.buttonColor);
         if (btnJump != null) btnJump.setBackgroundColor(theme.buttonColor);
         if (btnLoop != null) btnLoop.setBackgroundColor(theme.buttonColor);

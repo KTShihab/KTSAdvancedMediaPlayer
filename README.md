@@ -26,7 +26,7 @@ When you are on the **Player Tab**, the middle section displays your storage:
 * **Action Buttons**:
   * **Sort**: Sort your files by Name, Date, or Size (Ascending or Descending).
   * **Stream**: Play online radio and live audio streams directly from URLs.
-  * **Queue**: View and manage your current play queue (reorder tracks or clear).
+  * **Queue**: View and manage your current play queue. Whenever items are added to the Queue, they are given **immediate precedence**: as soon as your currently playing track finishes (or when you tap Next), the queued tracks play right away. Once the queue is finished, playback automatically resumes your original folder at the next track without missing your place!
 * **The File List**:
   * Clean list of folders and audio tracks (MP3, M4A, FLAC, WAV, AAC, OGG, OPUS, and ZIP archives).
   * Every item announces its name, duration, and file size clearly to screen readers.
@@ -41,19 +41,23 @@ At the bottom of the Player tab, you have a complete playback unit:
 * **Now Playing Banner**:
   * Displays the title of the track currently playing and its folder.
 
+* **Folder Navigation & Play Mode Row**:
+  * **📁⏮ Prev Folder**: Jump to and play the previous sibling folder or ZIP archive containing audio tracks.
+  * **Play Mode**: Switch between Play All, Repeat One, Repeat All, and Shuffle.
+  * **Next Folder ⏭📁**: Jump to and play the next sibling folder or ZIP archive containing audio tracks.
+
 * **Main Transport Controls**:
-  * **Play / Pause**: Start or pause audio playback.
+  * **Rewind**: Jump back by a few seconds (step size can be configured: 5s, 10s, 30s, 1m).
   * **Previous Track**: Jump to the beginning of the track or to the previous track.
-  * **Next Track**: Skip to the next track.
-  * **Play Mode**: Switch between Sequential, Repeat All, Repeat One, and Shuffle.
+  * **Play / Pause**: Start or pause audio playback.
+  * **Next Track**: Skip to the next track in the folder (or next queued item if items are queued).
+  * **Forward**: Jump forward by a few seconds.
 
 * **Seek Bar & Time**:
   * Shows current elapsed time and total duration.
   * Screen readers announce progress percentages and exact times as you slide.
 
 * **Fine Navigation & Audio Tools**:
-  * **Rewind**: Jump back by a few seconds (step size can be configured: 5s, 10s, 30s, 1m).
-  * **Forward**: Jump forward by a few seconds.
   * **Speed**: Change playback speed smoothly from **0.5x up to 3.0x** (ideal for audiobooks, lectures, and voice notes).
   * **Jump**: Opens a time dialog to jump directly to any exact minute and second in the track.
   * **Loop (A-B Repeat)**: Set a starting Point A and ending Point B to continuously loop a specific section of a song, speech, or lesson.
