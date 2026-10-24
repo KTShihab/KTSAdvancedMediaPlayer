@@ -127,7 +127,7 @@ public class AppUpdateManager {
         if (isManualCheck) {
             progressDialog = new ProgressDialog(activity);
             progressDialog.setTitle("🚀 GitHub In-App Update");
-            progressDialog.setMessage("Checking for updates from GitHub...\nഅപ്‌ഡേറ്റുകൾ പരിശോധിക്കുന്നു...");
+            progressDialog.setMessage("Checking for updates from GitHub...");
             progressDialog.setCancelable(false);
             progressDialog.show();
         } else {
@@ -221,7 +221,7 @@ public class AppUpdateManager {
                         if (isManualCheck) {
                             new AlertDialog.Builder(activity)
                                     .setTitle("✅ App Up To Date")
-                                    .setMessage("You are using the latest version of KTS Advanced Media Player!\n\nനിലവിലെ വേർഷൻ: v" + currentVersion + "\nGitHub വേർഷൻ: " + tagName)
+                                    .setMessage("You are using the latest version of KTS Advanced Media Player!\n\nCurrent Version: v" + currentVersion + "\nGitHub Version: " + tagName)
                                     .setPositiveButton("OK", null)
                                     .show();
                             if (activity instanceof MainActivity) {
@@ -245,7 +245,7 @@ public class AppUpdateManager {
 
     private void showUpdateAvailableDialog(Activity activity, ReleaseInfo info, String currentVersion) {
         StringBuilder msg = new StringBuilder();
-        msg.append("പുതിയ പതിപ്പ് ലഭ്യമാണ്! (New version available)\n\n");
+        msg.append("New version available!\n\n");
         msg.append("📱 Installed: v").append(currentVersion).append("\n");
         msg.append("🚀 Latest: ").append(info.tagName).append("\n");
 
@@ -253,7 +253,7 @@ public class AppUpdateManager {
             msg.append("📦 Download Size: ").append(formatFileSize(info.apkSize)).append("\n");
         }
 
-        msg.append("\n📝 Changelog (മാറ്റങ്ങൾ):\n").append(info.body).append("\n");
+        msg.append("\n📝 Changelog:\n").append(info.body).append("\n");
 
         AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                 .setTitle("🚀 Update Available: " + info.tagName)
@@ -265,7 +265,7 @@ public class AppUpdateManager {
                         Toast.makeText(activity, "No APK asset attached to this GitHub release.", Toast.LENGTH_LONG).show();
                     }
                 })
-                .setNegativeButton("Later (പിന്നീട്)", null);
+                .setNegativeButton("Later", null);
 
         if (activity instanceof MainActivity) {
             ((MainActivity) activity).announceAccessibility("New update available: " + info.tagName);
@@ -279,7 +279,7 @@ public class AppUpdateManager {
 
         ProgressDialog downloadDialog = new ProgressDialog(activity);
         downloadDialog.setTitle("📥 Downloading Update");
-        downloadDialog.setMessage("Downloading " + versionName + "...\nഡൗൺലോഡ് ചെയ്യുന്നു, ദയവായി കാത്തിരിക്കുക...");
+        downloadDialog.setMessage("Downloading " + versionName + "...\nPlease wait...");
         downloadDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         downloadDialog.setMax(100);
         downloadDialog.setProgress(0);
@@ -362,9 +362,9 @@ public class AppUpdateManager {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!activity.getPackageManager().canRequestPackageInstalls()) {
                     new AlertDialog.Builder(activity)
-                            .setTitle("⚙️ Permission Required (അനുമതി നൽകുക)")
-                            .setMessage("To install the update, please enable 'Allow from this source' for KTS Advanced Media Player in Settings.\n\nഅപ്‌ഡേറ്റ് ഇൻസ്റ്റാൾ ചെയ്യുന്നതിനായി സെറ്റിങ്‌സിൽ നിന്ന് ഈ ആപ്പിന് അനുമതി നൽകുക.")
-                            .setPositiveButton("Settings ലേക്ക് പോകുക", (dialog, which) -> {
+                            .setTitle("⚙️ Permission Required")
+                            .setMessage("To install the update, please enable 'Allow from this source' for KTS Advanced Media Player in Settings.")
+                            .setPositiveButton("Go to Settings", (dialog, which) -> {
                                 Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                                 intent.setData(Uri.parse("package:" + activity.getPackageName()));
                                 activity.startActivity(intent);

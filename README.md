@@ -109,7 +109,10 @@ Choose from **6 vibrant, high-contrast themes** designed for maximum visibility:
 * **Auto-Play Next Folder**: Automatically jumps to the next folder when the current folder finishes.
 * **Show Media Folders Only**: Automatically hides non-audio folders (like camera pictures, DCIM, documents) so your library remains clean.
 * **Slider Step Setting**: Change slider seek sensitivity (1%, 2%, 5%, or 10% per swipe).
-* **Sleep Timer**: Automatically stops playback after a set time or at the end of the current track.
+* **Sleep Timer**:
+  * **Persistent Mode (Permanent)**: Once you set a mode (e.g., End of Track, 15m, 30m, 1h, or custom minutes), it stays permanently active across all tracks and listening sessions until you change or turn it off. Every time you start playing, the timer automatically arms.
+  * **One-Time Mode (Manual)**: Runs once for the current track or duration, and turns off completely after expiring.
+  * Switch between Persistent and One-Time modes at any time, add 5 minutes to an active timer, or turn it off with one tap.
 
 ### 🎚️ 3. Audio Effects & Enhancements
 * **Volume Booster (Loudness Enhancer)**: Boost audio volume up to 4000 mB for quiet recordings or low-volume voice files.

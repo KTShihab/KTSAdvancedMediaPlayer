@@ -15,7 +15,6 @@ public class ThemeManager {
     public static class ThemeItem {
         public final String id;
         public final String displayName;
-        public final String malayalamName;
         public final int primaryColor;
         public final int secondaryColor;
         public final int bgColor;
@@ -23,12 +22,11 @@ public class ThemeManager {
         public final int buttonColor;
         public final int headerColor;
 
-        public ThemeItem(String id, String displayName, String malayalamName,
+        public ThemeItem(String id, String displayName,
                          int primaryColor, int secondaryColor,
                          int bgColor, int surfaceColor, int buttonColor, int headerColor) {
             this.id = id;
             this.displayName = displayName;
-            this.malayalamName = malayalamName;
             this.primaryColor = primaryColor;
             this.secondaryColor = secondaryColor;
             this.bgColor = bgColor;
@@ -45,7 +43,6 @@ public class ThemeManager {
         THEMES.add(new ThemeItem(
                 "royal_violet",
                 "💜 Royal Violet",
-                "റോയൽ വയലറ്റ്",
                 0xFF7C4DFF, // Primary Violet Neon
                 0xFFB388FF, // Secondary Lavender
                 0xFF121019, // Deep Background
@@ -58,7 +55,6 @@ public class ThemeManager {
         THEMES.add(new ThemeItem(
                 "emerald_cyber",
                 "💚 Emerald Cyber",
-                "സൈബർ ഗ്രീൻ",
                 0xFF00E676, // Neon Mint
                 0xFF69F0AE, // Light Sage
                 0xFF0A130E, // Cyber Forest
@@ -71,7 +67,6 @@ public class ThemeManager {
         THEMES.add(new ThemeItem(
                 "oceanic_azure",
                 "💙 Oceanic Azure",
-                "ഓഷ്യൻ ബ്ലൂ",
                 0xFF00B0FF, // Electric Cyan
                 0xFF80D8FF, // Sky Blue
                 0xFF0A121D, // Abyss Navy
@@ -84,7 +79,6 @@ public class ThemeManager {
         THEMES.add(new ThemeItem(
                 "sunset_gold",
                 "🧡 Sunset Gold",
-                "സൺസെറ്റ് ഗോൾഡ്",
                 0xFFFF9100, // Vibrant Amber
                 0xFFFFD54F, // Warm Gold
                 0xFF150E0A, // Dark Mocha
@@ -97,7 +91,6 @@ public class ThemeManager {
         THEMES.add(new ThemeItem(
                 "neon_synthwave",
                 "💖 Neon Synthwave",
-                "നിയോൺ സിന്ത്‌വേവ്",
                 0xFFFF4081, // Hot Neon Pink
                 0xFFEA80FC, // Cyber Magenta
                 0xFF140A18, // Synth Dark
@@ -110,7 +103,6 @@ public class ThemeManager {
         THEMES.add(new ThemeItem(
                 "amoled_dark",
                 "🖤 AMOLED Pure Dark",
-                "പ്യുവർ ഡാർക്ക്",
                 0xFFFFFFFF, // Crisp White
                 0xFFBDBDBD, // Silver
                 0xFF000000, // Pure Black

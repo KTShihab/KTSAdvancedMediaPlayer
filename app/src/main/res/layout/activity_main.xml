@@ -1030,7 +1030,7 @@
                     android:id="@+id/headerUpdates"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🚀 App Updates (ഇൻ-ആപ്പ് അപ്‌ഡേറ്റുകൾ)"
+                    android:text="🚀 App Updates"
                     android:textColor="#BB86FC"
                     android:textSize="17sp"
                     android:textStyle="bold"
@@ -1052,7 +1052,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="46dp"
                     android:backgroundTint="#7C4DFF"
-                    android:text="🔄 Check for Updates (അപ്‌ഡേറ്റുകൾ പരിശോധിക്കുക)"
+                    android:text="🔄 Check for Updates"
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="6dp" />

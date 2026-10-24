@@ -366,6 +366,9 @@ public class MainActivity extends AppCompatActivity {
     private long sleepTimerEndTimeMs = 0;
     private boolean isSleepTimerActive = false;
     private boolean isSleepEndOfTrack = false;
+    private boolean isSleepTimerPersistent = false;
+    private long persistentSleepDurationMs = 0;
+    private String persistentSleepLabel = "End of Track";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -1553,6 +1556,13 @@ public class MainActivity extends AppCompatActivity {
         btnClearAllCache = findViewById(R.id.btnClearAllCache);
         updateZipCacheUI();
         updateScreenOffVolToggleUI();
+        isSleepTimerPersistent = bkPrefs.getBoolean("sleep_timer_persistent", false);
+        persistentSleepDurationMs = bkPrefs.getLong("sleep_persistent_duration_ms", 0);
+        persistentSleepLabel = bkPrefs.getString("sleep_persistent_label", "End of Track");
+        if (isSleepTimerPersistent && persistentSleepDurationMs <= 0) {
+            isSleepTimerActive = true;
+            isSleepEndOfTrack = true;
+        }
         updateSleepTimerUI();
     }
 
@@ -6251,22 +6261,22 @@ public class MainActivity extends AppCompatActivity {
                         showSleepTimerDialog();
                         return true;
                     } else if (action == R.id.action_timer_15) {
-                        startSleepTimer(15 * 60 * 1000, "15 minutes");
+                        startSleepTimer(15 * 60 * 1000, "15 minutes", isSleepTimerPersistent);
                         return true;
                     } else if (action == R.id.action_timer_30) {
-                        startSleepTimer(30 * 60 * 1000, "30 minutes");
+                        startSleepTimer(30 * 60 * 1000, "30 minutes", isSleepTimerPersistent);
                         return true;
                     } else if (action == R.id.action_timer_45) {
-                        startSleepTimer(45 * 60 * 1000, "45 minutes");
+                        startSleepTimer(45 * 60 * 1000, "45 minutes", isSleepTimerPersistent);
                         return true;
                     } else if (action == R.id.action_timer_60) {
-                        startSleepTimer(60 * 60 * 1000, "1 hour");
+                        startSleepTimer(60 * 60 * 1000, "1 hour", isSleepTimerPersistent);
                         return true;
                     } else if (action == R.id.action_timer_end_of_track) {
-                        startSleepTimerEndOfTrack();
+                        startSleepTimerEndOfTrack(isSleepTimerPersistent);
                         return true;
                     } else if (action == R.id.action_timer_cancel) {
-                        cancelSleepTimer();
+                        turnOffSleepTimer();
                         return true;
                     }
                     return super.performAccessibilityAction(host, action, args);
@@ -7256,7 +7266,7 @@ public class MainActivity extends AppCompatActivity {
                         MediaBookmarkItem bmToDelete = bookmarks.get(position - startBmIdx);
                         new AlertDialog.Builder(MainActivity.this)
                                 .setTitle("🗑️ Delete Bookmark?")
-                                .setMessage("Delete bookmark \"" + bmToDelete.bookmarkTitle + "\" (" + formatTime((int) bmToDelete.positionMs) + ") in " + bmToDelete.trackName + "?\nഈ ബുക്ക്‌മാർക്ക് ഡിലീറ്റ് ചെയ്യണമെന്ന് ഉറപ്പാണോ?")
+                                .setMessage("Delete bookmark \"" + bmToDelete.bookmarkTitle + "\" (" + formatTime((int) bmToDelete.positionMs) + ") in " + bmToDelete.trackName + "?")
                                 .setPositiveButton("Delete", (d, w) -> {
                                     deleteBookmark(bmToDelete);
                                     bookmarkDialog.dismiss();
@@ -7437,7 +7447,7 @@ public class MainActivity extends AppCompatActivity {
 
                 new AlertDialog.Builder(this)
                         .setTitle("Delete " + toDelete.size() + " Bookmark(s)?")
-                        .setMessage("Are you sure you want to delete " + toDelete.size() + " selected bookmark(s)?\nതിരഞ്ഞെടുത്ത " + toDelete.size() + " ബുക്ക്‌മാർക്കുകൾ ഡിലീറ്റ് ചെയ്യണമെന്ന് ഉറപ്പാണോ?")
+                        .setMessage("Are you sure you want to delete " + toDelete.size() + " selected bookmark(s)?")
                         .setPositiveButton("Delete", (dialog, which) -> {
                             for (MediaBookmarkItem item : toDelete) {
                                 deleteBookmarkInternal(item);
@@ -7910,6 +7920,7 @@ public class MainActivity extends AppCompatActivity {
                     mediaPlayer.setVolume(0f);
                     mediaPlayer.play();
                     fadeAudio(0.0f, 1.0f, 400, null);
+                    ensurePersistentSleepTimerArmed();
 
                     updateMediaSessionState(PlaybackState.STATE_PLAYING);
                     announceAccessibility("Playing");
@@ -9022,6 +9033,7 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.play();
             updateMediaPlayerOutputDevice();
             fadeAudio(0.0f, 1.0f, 500, null);
+            ensurePersistentSleepTimerArmed();
 
             resetAB();
             updateMediaSessionState(PlaybackState.STATE_PLAYING);
@@ -9362,6 +9374,7 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.play();
             updateMediaPlayerOutputDevice();
             fadeAudio(0.0f, 1.0f, 500, null);
+            ensurePersistentSleepTimerArmed();
 
             resetAB();
             updateMediaSessionState(PlaybackState.STATE_PLAYING);
@@ -9507,58 +9520,131 @@ public class MainActivity extends AppCompatActivity {
 
     // ================= Sleep Timer Implementation =================
 
-    private void showSleepTimerDialog() {
-        if (isSleepTimerActive || isSleepEndOfTrack) {
-            long remainingMs = Math.max(0, sleepTimerEndTimeMs - System.currentTimeMillis());
-            long minutes = (remainingMs / 1000) / 60;
-            long seconds = (remainingMs / 1000) % 60;
-            String timeStr = isSleepEndOfTrack ? "Timer: End of Track" : String.format("Timer: %d min %d sec left", minutes, seconds);
+    private void ensurePersistentSleepTimerArmed() {
+        if (isSleepTimerPersistent) {
+            if (persistentSleepDurationMs <= 0) {
+                if (!isSleepEndOfTrack) {
+                    startSleepTimerEndOfTrack(true);
+                }
+            } else {
+                if (!isSleepTimerActive) {
+                    startSleepTimer(persistentSleepDurationMs, persistentSleepLabel, true);
+                }
+            }
+        }
+    }
 
-            String[] activeOptions = {"❌ Turn Off Sleep Timer", "➕ Add 5 Minutes", "🔄 Change Time"};
-            new AlertDialog.Builder(this)
-                    .setTitle(timeStr)
-                    .setItems(activeOptions, (dialog, which) -> {
-                        if (which == 0) {
-                            cancelSleepTimer();
-                            Toast.makeText(this, "Sleep Timer turned OFF", Toast.LENGTH_SHORT).show();
-                            announceAccessibility("Sleep Timer turned OFF");
-                        } else if (which == 1) {
-                            extendSleepTimer(5 * 60 * 1000);
-                            Toast.makeText(this, "Added 5 minutes to Sleep Timer", Toast.LENGTH_SHORT).show();
-                            announceAccessibility("Added 5 minutes to Sleep Timer");
-                        } else if (which == 2) {
-                            cancelSleepTimer();
-                            showSleepTimerPresetsDialog();
-                        }
-                    })
-                    .setNegativeButton("Close", null)
-                    .show();
+    private void showSleepTimerDialog() {
+        String statusText;
+        if (isSleepTimerActive || isSleepEndOfTrack) {
+            String modeType = isSleepTimerPersistent ? "Persistent" : "One-Time";
+            if (isSleepEndOfTrack) {
+                statusText = "Sleep Timer: [" + modeType + "] End of Track";
+            } else {
+                long remainingMs = Math.max(0, sleepTimerEndTimeMs - System.currentTimeMillis());
+                long minutes = (remainingMs / 1000) / 60;
+                long seconds = (remainingMs / 1000) % 60;
+                statusText = String.format("Sleep Timer: [%s] %02d:%02d left", modeType, minutes, seconds);
+            }
+        } else if (isSleepTimerPersistent) {
+            statusText = "Sleep Timer: [Persistent] Armed for " + persistentSleepLabel;
+        } else {
+            statusText = "Sleep Timer: OFF";
+        }
+
+        List<String> options = new ArrayList<>();
+
+        if (isSleepTimerActive || isSleepEndOfTrack || isSleepTimerPersistent) {
+            options.add("❌ Turn Off Sleep Timer");
+            if (isSleepTimerActive && !isSleepEndOfTrack) {
+                options.add("➕ Add 5 Minutes");
+            }
+            if (isSleepTimerPersistent) {
+                options.add("⏱️ Switch to One-Time / Manual Mode");
+            } else {
+                options.add("🔄 Switch to Persistent (Permanent) Mode");
+            }
+            options.add("⚙️ Set Different Time / Preset...");
         } else {
             showSleepTimerPresetsDialog();
+            return;
         }
+
+        new AlertDialog.Builder(this)
+                .setTitle(statusText)
+                .setItems(options.toArray(new String[0]), (dialog, which) -> {
+                    String selected = options.get(which);
+                    if (selected.equals("❌ Turn Off Sleep Timer")) {
+                        turnOffSleepTimer();
+                    } else if (selected.equals("➕ Add 5 Minutes")) {
+                        extendSleepTimer(5 * 60 * 1000L);
+                        Toast.makeText(this, "Added 5 minutes to Sleep Timer", Toast.LENGTH_SHORT).show();
+                        announceAccessibility("Added 5 minutes to Sleep Timer");
+                    } else if (selected.equals("⏱️ Switch to One-Time / Manual Mode")) {
+                        isSleepTimerPersistent = false;
+                        bkPrefs.edit().putBoolean("sleep_timer_persistent", false).apply();
+                        updateSleepTimerUI();
+                        Toast.makeText(this, "Switched to One-Time mode (will turn off after expiring)", Toast.LENGTH_SHORT).show();
+                        announceAccessibility("Switched to One-Time mode");
+                    } else if (selected.equals("🔄 Switch to Persistent (Permanent) Mode")) {
+                        isSleepTimerPersistent = true;
+                        bkPrefs.edit().putBoolean("sleep_timer_persistent", true).apply();
+                        updateSleepTimerUI();
+                        Toast.makeText(this, "Switched to Persistent mode (permanent until changed)", Toast.LENGTH_SHORT).show();
+                        announceAccessibility("Switched to Persistent mode");
+                    } else if (selected.equals("⚙️ Set Different Time / Preset...")) {
+                        showSleepTimerPresetsDialog();
+                    }
+                })
+                .setNegativeButton("Close", null)
+                .show();
     }
 
     private void showSleepTimerPresetsDialog() {
         String[] timerOptions = {
+                "🎵 End of Track",
                 "⏱️ 15 Minutes",
                 "⏱️ 30 Minutes",
+                "⏱️ 45 Minutes",
                 "⏱️ 1 Hour",
-                "🎵 End of Current Track",
                 "⚙️ Custom Minutes..."
         };
+
         new AlertDialog.Builder(this)
-                .setTitle("Set Sleep Timer")
+                .setTitle("Select Sleep Target")
                 .setItems(timerOptions, (dialog, which) -> {
                     if (which == 0) {
-                        startSleepTimer(15 * 60 * 1000, "15 minutes");
+                        promptSleepModeType(0, "End of Track");
                     } else if (which == 1) {
-                        startSleepTimer(30 * 60 * 1000, "30 minutes");
+                        promptSleepModeType(15 * 60 * 1000L, "15 minutes");
                     } else if (which == 2) {
-                        startSleepTimer(60 * 60 * 1000, "1 hour");
+                        promptSleepModeType(30 * 60 * 1000L, "30 minutes");
                     } else if (which == 3) {
-                        startSleepTimerEndOfTrack();
+                        promptSleepModeType(45 * 60 * 1000L, "45 minutes");
                     } else if (which == 4) {
+                        promptSleepModeType(60 * 60 * 1000L, "1 hour");
+                    } else if (which == 5) {
                         showCustomSleepTimerDialog();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void promptSleepModeType(long durationMs, String label) {
+        String[] modeChoices = {
+                "🔄 Persistent (Permanent until changed)",
+                "⏱️ One-Time (Manual - turns off after expiring)"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Set " + label + " as:")
+                .setItems(modeChoices, (dialog, which) -> {
+                    boolean persistent = (which == 0);
+                    if (durationMs <= 0) {
+                        startSleepTimerEndOfTrack(persistent);
+                    } else {
+                        startSleepTimer(durationMs, label, persistent);
                     }
                 })
                 .setNegativeButton("Cancel", null)
@@ -9576,13 +9662,13 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle("Custom Sleep Timer")
                 .setMessage("Enter duration in minutes:")
                 .setView(input)
-                .setPositiveButton("Set", (dialog, which) -> {
+                .setPositiveButton("Next", (dialog, which) -> {
                     String val = input.getText().toString().trim();
                     if (!val.isEmpty()) {
                         try {
                             int mins = Integer.parseInt(val);
                             if (mins > 0 && mins <= 600) {
-                                startSleepTimer(mins * 60L * 1000L, mins + " minutes");
+                                promptSleepModeType(mins * 60L * 1000L, mins + " minutes");
                             } else {
                                 Toast.makeText(this, "Please enter between 1 and 600 minutes", Toast.LENGTH_SHORT).show();
                             }
@@ -9595,8 +9681,17 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void startSleepTimer(long durationMs, String label) {
-        cancelSleepTimer();
+    private void startSleepTimer(long durationMs, String label, boolean persistent) {
+        cancelSleepTimerInternal();
+        isSleepTimerPersistent = persistent;
+        persistentSleepDurationMs = durationMs;
+        persistentSleepLabel = label;
+        bkPrefs.edit()
+                .putBoolean("sleep_timer_persistent", persistent)
+                .putLong("sleep_persistent_duration_ms", durationMs)
+                .putString("sleep_persistent_label", label)
+                .apply();
+
         isSleepTimerActive = true;
         isSleepEndOfTrack = false;
         sleepTimerEndTimeMs = System.currentTimeMillis() + durationMs;
@@ -9615,37 +9710,68 @@ public class MainActivity extends AppCompatActivity {
         };
         sleepTimerHandler.post(sleepTimerRunnable);
         updateSleepTimerUI();
-        Toast.makeText(this, "Sleep Timer set for " + label, Toast.LENGTH_SHORT).show();
-        announceAccessibility("Sleep Timer set for " + label);
+
+        String modeText = persistent ? "Persistent mode (stays active until changed)" : "One-Time mode";
+        Toast.makeText(this, "Sleep Timer: " + label + " (" + modeText + ")", Toast.LENGTH_SHORT).show();
+        announceAccessibility("Sleep Timer set for " + label + " in " + modeText);
     }
 
-    private void startSleepTimerEndOfTrack() {
-        cancelSleepTimer();
+    private void startSleepTimerEndOfTrack(boolean persistent) {
+        cancelSleepTimerInternal();
+        isSleepTimerPersistent = persistent;
+        persistentSleepDurationMs = 0;
+        persistentSleepLabel = "End of Track";
+        bkPrefs.edit()
+                .putBoolean("sleep_timer_persistent", persistent)
+                .putLong("sleep_persistent_duration_ms", 0)
+                .putString("sleep_persistent_label", "End of Track")
+                .apply();
+
         isSleepTimerActive = true;
         isSleepEndOfTrack = true;
         updateSleepTimerUI();
-        Toast.makeText(this, "Sleep Timer: Stop after current track", Toast.LENGTH_SHORT).show();
-        announceAccessibility("Sleep Timer set for end of current track");
+
+        String modeText = persistent ? "Persistent mode (stops after every track)" : "One-Time mode (stops after current track)";
+        Toast.makeText(this, "Sleep Timer: End of Track (" + modeText + ")", Toast.LENGTH_SHORT).show();
+        announceAccessibility("Sleep Timer set for End of Track in " + modeText);
     }
 
     private void onSleepTimerTriggered() {
-        cancelSleepTimer();
+        if (!isSleepTimerPersistent) {
+            cancelSleepTimerInternal();
+        } else {
+            if (persistentSleepDurationMs > 0) {
+                isSleepTimerActive = false;
+                if (sleepTimerRunnable != null) {
+                    sleepTimerHandler.removeCallbacks(sleepTimerRunnable);
+                    sleepTimerRunnable = null;
+                }
+            }
+            updateSleepTimerUI();
+        }
+
         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
             fadeAudio(1.0f, 0.0f, 3000, () -> {
                 if (mediaPlayer != null) {
                     mediaPlayer.pause();
                     updateMediaSessionState(PlaybackState.STATE_PAUSED);
-                    btnPlay.setText("Play / Pause");
+                    btnPlay.setText("Play");
                     mediaPlayer.setVolume(1.0f);
                 }
-                announceAccessibility("Sleep timer finished. Playback paused.");
+                String msg = isSleepTimerPersistent ?
+                        "Persistent sleep timer triggered (" + persistentSleepLabel + "). Playback paused." :
+                        "Sleep timer finished. Playback paused.";
+                announceAccessibility(msg);
             });
         } else {
-            announceAccessibility("Sleep timer finished.");
+            String msg = isSleepTimerPersistent ?
+                    "Persistent sleep timer triggered (" + persistentSleepLabel + ")." :
+                    "Sleep timer finished.";
+            announceAccessibility(msg);
         }
     }
 
-    private void cancelSleepTimer() {
+    private void cancelSleepTimerInternal() {
         isSleepTimerActive = false;
         isSleepEndOfTrack = false;
         sleepTimerEndTimeMs = 0;
@@ -9654,6 +9780,22 @@ public class MainActivity extends AppCompatActivity {
             sleepTimerRunnable = null;
         }
         updateSleepTimerUI();
+    }
+
+    private void turnOffSleepTimer() {
+        isSleepTimerPersistent = false;
+        bkPrefs.edit()
+                .putBoolean("sleep_timer_persistent", false)
+                .putLong("sleep_persistent_duration_ms", 0)
+                .putString("sleep_persistent_label", "End of Track")
+                .apply();
+        cancelSleepTimerInternal();
+        Toast.makeText(this, "Sleep Timer turned OFF", Toast.LENGTH_SHORT).show();
+        announceAccessibility("Sleep Timer turned OFF");
+    }
+
+    private void cancelSleepTimer() {
+        turnOffSleepTimer();
     }
 
     private void extendSleepTimer(long additionalMs) {
@@ -9666,14 +9808,22 @@ public class MainActivity extends AppCompatActivity {
     private void updateSleepTimerUI() {
         if (btnSleepTimer == null) return;
         if (isSleepEndOfTrack) {
-            btnSleepTimer.setText("Sleep Timer: End of Track (Tap to cancel)");
+            String modeStr = isSleepTimerPersistent ? "Persistent" : "One-Time";
+            btnSleepTimer.setText("Sleep Timer: [" + modeStr + "] End of Track (Tap to manage)");
+            btnSleepTimer.setContentDescription("Sleep timer active. " + modeStr + " mode, stop at end of track. Tap to manage.");
         } else if (isSleepTimerActive) {
             long remainingMs = Math.max(0, sleepTimerEndTimeMs - System.currentTimeMillis());
             long minutes = (remainingMs / 1000) / 60;
             long seconds = (remainingMs / 1000) % 60;
-            btnSleepTimer.setText(String.format("Sleep Timer: %02d:%02d left (Tap to cancel)", minutes, seconds));
+            String modeStr = isSleepTimerPersistent ? "Persistent" : "One-Time";
+            btnSleepTimer.setText(String.format("Sleep Timer: [%s] %02d:%02d left (Tap to manage)", modeStr, minutes, seconds));
+            btnSleepTimer.setContentDescription(String.format("Sleep timer active. %s mode, %d minutes %d seconds left. Tap to manage.", modeStr, minutes, seconds));
+        } else if (isSleepTimerPersistent) {
+            btnSleepTimer.setText("Sleep Timer: [Persistent] " + persistentSleepLabel + " (Armed)");
+            btnSleepTimer.setContentDescription("Sleep timer persistent mode armed for " + persistentSleepLabel + ". Tap to manage.");
         } else {
             btnSleepTimer.setText("Sleep Timer: OFF");
+            btnSleepTimer.setContentDescription("Sleep timer is off. Tap to set sleep timer.");
         }
     }
 
@@ -9846,14 +9996,14 @@ public class MainActivity extends AppCompatActivity {
         int checkedItem = 0;
         for (int i = 0; i < themes.size(); i++) {
             ThemeManager.ThemeItem t = themes.get(i);
-            displayNames[i] = t.displayName + " (" + t.malayalamName + ")";
+            displayNames[i] = t.displayName;
             if (t.id.equals(current.id)) {
                 checkedItem = i;
             }
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("🎨 Choose App Skin / Theme (തീം തിരഞ്ഞെടുക്കുക)")
+                .setTitle("🎨 Choose App Skin / Theme")
                 .setSingleChoiceItems(displayNames, checkedItem, (dialog, which) -> {
                     ThemeManager.ThemeItem selected = themes.get(which);
                     ThemeManager.setCurrentTheme(this, selected.id);
