@@ -141,7 +141,8 @@ public class GoogleDriveManager {
                 if (titleMatcher.find()) {
                     String rawTitle = titleMatcher.group(1).trim();
                     rawTitle = rawTitle.replace("- Google Drive", "").replace("Google Drive -", "").trim();
-                    if (!rawTitle.isEmpty() && !rawTitle.equalsIgnoreCase("Meet Google Drive – One place for all your files")) {
+                    String normTitle = rawTitle.replace('\u2013', '-');
+                    if (!rawTitle.isEmpty() && !normTitle.equalsIgnoreCase("Meet Google Drive - One place for all your files")) {
                         folderTitle = rawTitle;
                     }
                 }

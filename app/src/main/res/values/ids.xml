@@ -120,6 +120,7 @@
     <item type="id" name="action_now_bookshelf" />
     <item type="id" name="action_now_playlist" />
     <item type="id" name="action_now_share" />
+    <item type="id" name="action_now_ringtone" />
 
     <!-- Home Screen / Quick Shortcut Actions -->
     <item type="id" name="action_resume_last" />

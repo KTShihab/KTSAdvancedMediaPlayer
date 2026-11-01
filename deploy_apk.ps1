@@ -1,5 +1,5 @@
 param(
-    [string]$deviceAddress = "192.168.1.43:36629"
+    [string]$deviceAddress = "192.168.1.40:33367"
 )
 
 # Deploy APK script for KTS Advanced Media Player

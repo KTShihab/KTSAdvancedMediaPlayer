@@ -2,19 +2,19 @@
 
 **KTS Advanced Media Player** is a powerful, lightweight, and fully accessible Android audio player designed with deep care for **Screen Reader (TalkBack) users** as well as all music and audiobook lovers.
 
-Every button, slider, and list item has clear spoken labels, accessibility headings, and smart double-tap/long-press actions. The app works smoothly in the background, even with the screen turned off.
+Every button, slider, and list item has clear spoken labels, accessibility headings, and smart double-tap and long-press actions. The app works smoothly in the background, even with the screen turned off.
 
 ---
 
-## 📱 App Layout & Interface
+## App Layout & Interface
 
 The app is organized into a clean, simple, and high-contrast layout:
 
 ### 1. Top Navigation Bar (3 Main Tabs)
 At the very top of the screen, you will always find three main tabs:
 * **Player Tab**: Your main music and media playback screen with your storage files and full playback unit.
-* **Library Tab**: Quick access to your Favorites, Bookshelf, Play History, and custom Playlists.
-* **Settings Tab**: Sound effects, colorful themes, volume button gestures, cache tools, and in-app updates.
+* **Library Tab**: Quick access to Bookshelf, Favorites, Playlists, and Play History.
+* **Settings Tab**: Sound effects, high-contrast themes, volume button gestures, cache tools, and in-app updates.
 
 ---
 
@@ -38,24 +38,32 @@ When you are on the **Player Tab**, the middle section displays your storage:
 
 At the bottom of the Player tab, you have a complete playback unit:
 
-* **Now Playing Banner**:
-  * Displays the title of the track currently playing and its folder.
-
-* **Folder Navigation & Play Mode Row**:
-  * **📁⏮ Prev Folder**: Jump to and play the previous sibling folder or ZIP archive containing audio tracks.
-  * **Play Mode**: Switch between Play All, Repeat One, Repeat All, and Shuffle.
-  * **Next Folder ⏭📁**: Jump to and play the next sibling folder or ZIP archive containing audio tracks.
-
-* **Main Transport Controls**:
-  * **Rewind**: Jump back by a few seconds (step size can be configured: 5s, 10s, 30s, 1m).
-  * **Previous Track**: Jump to the beginning of the track or to the previous track.
-  * **Play / Pause**: Start or pause audio playback.
-  * **Next Track**: Skip to the next track in the folder (or next queued item if items are queued).
-  * **Forward**: Jump forward by a few seconds.
+* **Now Playing Card**:
+  * Positioned directly below the file list and directly above the playback progress slider.
+  * Clearly displays the title of the track currently playing along with its artist and album information.
+  * Tapping the card opens a rich options menu:
+    * **Share Track**: Share the current audio file or stream to other apps.
+    * **Set as Ringtone**: Directly set the track as your phone ringtone.
+    * **Add to Favorites**: Quickly save the track to your Favorites.
+    * **Add to Playlist**: Add the track to an existing or new custom playlist.
+    * **Add to Book Shelf**: Add the track or audiobook folder to a bookshelf.
+    * **Track Details**: View detailed duration, format, and playback metrics.
 
 * **Seek Bar & Time**:
   * Shows current elapsed time and total duration.
   * Screen readers announce progress percentages and exact times as you slide.
+
+* **Folder Navigation & Play Mode Row**:
+  * **Prev Folder**: Jump to and play the previous sibling folder or ZIP archive containing audio tracks.
+  * **Play Mode**: Switch between Play All, Repeat One, Repeat All, and Shuffle.
+  * **Next Folder**: Jump to and play the next sibling folder or ZIP archive containing audio tracks.
+
+* **Main Transport Controls**:
+  * **Rewind 10s**: Jump back by a few seconds (step size can be configured: 5s, 10s, 30s, 1m).
+  * **Previous**: Jump to the beginning of the track or to the previous track.
+  * **Play / Pause**: Start or pause audio playback.
+  * **Next**: Skip to the next track in the folder (or next queued item if items are queued).
+  * **Forward 10s**: Jump forward by a few seconds.
 
 * **Fine Navigation & Audio Tools**:
   * **Speed**: Change playback speed smoothly from **0.5x up to 3.0x** (ideal for audiobooks, lectures, and voice notes).
@@ -79,31 +87,31 @@ At the bottom of the Player tab, you have a complete playback unit:
 
 ---
 
-## 📚 The Library Tab
+## The Library Tab
 
-The Library tab organizes your audio collection into four top cards:
+The Library tab organizes your audio collection and defaults to **Bookshelf**:
 
-1. **Favorites**: Songs and files you have marked with a star for quick listening.
-2. **Bookshelf**: Specially built for audiobooks, long lectures, and podcasts. Remembers your exact playback position across different books.
-3. **History**: Automatically records tracks and folders you have played, with filter buttons for Tracks, Folders, and Playlists.
-4. **Playlists**: Create, rename, edit, and organize custom playlists.
+1. **Bookshelf**: Specially built for audiobooks, long lectures, and podcasts. Remembers your exact playback position across different books.
+2. **Favorites**: Songs and files you have marked for quick listening.
+3. **Playlists**: Create, rename, edit, and organize custom playlists.
+4. **History**: Automatically records tracks and folders you have played, with filter buttons for Tracks, Folders, and Playlists.
 
 ---
 
-## ⚙️ The Settings Tab
+## The Settings Tab
 
 The Settings tab is divided into clear, organized categories:
 
-### 🎨 1. Appearance & Themes (Skins)
+### 1. Appearance & Themes (Skins)
 Choose from **6 vibrant, high-contrast themes** designed for maximum visibility:
-1. 💜 **Royal Violet** (Default neon violet and dark velvet)
-2. 💚 **Emerald Cyber** (Neon mint and deep jade)
-3. 💙 **Oceanic Azure** (Electric cyan and sapphire navy)
-4. 🧡 **Sunset Gold** (Warm amber and mocha bronze)
-5. 💖 **Neon Synthwave** (Vibrant cyber pink and magenta)
-6. 🖤 **AMOLED Pure Dark** (Pitch black with crisp silver text for battery saving)
+1. **Royal Violet** (Default neon violet and dark velvet)
+2. **Emerald Cyber** (Neon mint and deep jade)
+3. **Oceanic Azure** (Electric cyan and sapphire navy)
+4. **Sunset Gold** (Warm amber and mocha bronze)
+5. **Neon Synthwave** (Vibrant cyber pink and magenta)
+6. **AMOLED Pure Dark** (Pitch black with crisp silver text for battery saving)
 
-### 🎵 2. Playback & Navigation
+### 2. Playback & Navigation
 * **Background Playback**: Keep music playing while using other apps or with the screen locked.
 * **Resume Playback**: Automatically continues playing from where you last stopped when you launch the app.
 * **Auto-Play Next Folder**: Automatically jumps to the next folder when the current folder finishes.
@@ -114,13 +122,13 @@ Choose from **6 vibrant, high-contrast themes** designed for maximum visibility:
   * **One-Time Mode (Manual)**: Runs once for the current track or duration, and turns off completely after expiring.
   * Switch between Persistent and One-Time modes at any time, add 5 minutes to an active timer, or turn it off with one tap.
 
-### 🎚️ 3. Audio Effects & Enhancements
+### 3. Audio Effects & Enhancements
 * **Volume Booster (Loudness Enhancer)**: Boost audio volume up to 4000 mB for quiet recordings or low-volume voice files.
 * **5-Band Equalizer**: Customize bass, midrange, and treble to match your headphones.
 * **3D Virtualizer**: Adds spatial depth and stereo surround effect.
 * **Skip Silence**: Automatically fast-forwards through dead silence in recordings and audiobooks.
 
-### 🔘 4. Volume Button Shortcuts (Screen-Off Controls)
+### 4. Volume Button Shortcuts (Screen-Off Controls)
 Control playback without taking the phone out of your pocket:
 * **Double-click Volume Up**: Next Track
 * **Double-click Volume Down**: Previous Track
@@ -128,23 +136,23 @@ Control playback without taking the phone out of your pocket:
 * **Long-press Volume Down**: Rewind
 * Works even when your phone screen is completely locked and dark!
 
-### 🧹 5. Storage & Cache Management
+### 5. Storage & Cache Management
 * **Clear ZIP Cache**: Frees storage used by unzipped audio files.
 * **Clear Shared Media Cache**: Deletes temporary files from "Open with" audio shares.
 * **Clear All Temporary Cache**: One-tap cleanup to reclaim phone storage.
 
-### 📌 6. Shortcuts & Integrations
+### 6. Shortcuts & Integrations
 * **Home Screen Shortcuts**: Pin 1-tap shortcuts for "Resume", "Bookshelf", "Favorites", and "History" directly to your Android home screen.
 * **Google Drive Link Integration**: Open Google Drive audio links and folders directly in KTS Player.
 
-### 🚀 7. In-App Updates
+### 7. In-App Updates
 * Check for new versions with a single tap (`Check for Updates`).
 * When an update is published on GitHub, the app alerts you, shows what is new, and allows you to download and install it in one click without opening a web browser.
 * Toggle automatic update checking on app startup.
 
 ---
 
-## ♿ Accessibility First (TalkBack Optimized)
+## Accessibility First (TalkBack Optimized)
 
 * **Semantic Labels**: Every button has descriptive text and TalkBack announcements.
 * **Double-Tap and Hold Actions**: Quick-actions available on long-press without cluttering the screen.
@@ -154,7 +162,7 @@ Control playback without taking the phone out of your pocket:
 
 ---
 
-## 📥 Download & Installation
+## Download & Installation
 
 You can download the latest official APK from the **[Releases](https://github.com/KTShihab/KTSAdvancedMediaPlayer/releases)** section of this repository.
 
@@ -164,5 +172,5 @@ You can download the latest official APK from the **[Releases](https://github.co
 
 ---
 
-## 📄 License
+## License
 This project is open-source and created to bring a delightful, accessible media listening experience to everyone.

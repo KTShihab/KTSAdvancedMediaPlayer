@@ -8,6 +8,7 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -24,6 +25,8 @@ import android.hardware.SensorManager;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.media.MediaMetadataRetriever;
+import android.media.RingtoneManager;
 import android.os.PowerManager;
 import android.media.VolumeProvider;
 import android.media.audiofx.Equalizer;
@@ -130,10 +133,10 @@ public class MainActivity extends AppCompatActivity {
     private Button btnAppTheme;
     private TextView headerAppearance, headerPlayback, headerAudioEffects, headerVolShortcuts, headerStorage, headerShortcuts, headerUpdates, tvCurrentVersionInfo;
     private Button btnCheckUpdate, btnAutoCheckUpdateToggle;
-    private LinearLayout layoutTopTabBar, cardNowPlaying, cardPlaybackControls, layoutLibHeader;
+    private LinearLayout layoutTopTabBar, cardFolderHeader, cardNowPlaying, cardPlaybackControls, layoutLibHeader;
     private int currentSelectedTab = 1;
 
-    private TextView tvNowPlaying, tvCurrentFolder;
+    private TextView tvNowPlaying, tvNowPlayingArtistAlbum, tvCurrentFolder;
     private Button btnResumeFolder;
     private final Stack<String> folderBackStack = new Stack<>();
     private long lastPeriodicSaveTime = 0;
@@ -181,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnVolShortcutsMasterToggle, btnScreenOffVolToggle, btnSleepTimer;
     private Button btnPinResumeShortcut, btnPinShelfShortcut, btnPinFavShortcut, btnPinHistShortcut;
 
-    private int libraryMode = 1;
+    private int libraryMode = 4; // Default to Bookshelves (4)
     private int historyFilterMode = 0; // 0 = Tracks, 1 = Folders, 2 = Playlists
     private String currentPlaylistName = "";
     private String currentShelfName = "";
@@ -682,7 +685,7 @@ public class MainActivity extends AppCompatActivity {
             libraryMode = 0;
             historyFilterMode = 0;
             loadHistoryData();
-            announceAccessibility("Showing History");
+            announceAccessibility("Showing History Tracks");
             return;
         }
 
@@ -800,7 +803,7 @@ public class MainActivity extends AppCompatActivity {
                 if (progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
-                libPrefs.edit().putString("title_" + folderUrl, "📁 " + folderName).apply();
+                libPrefs.edit().putString("title_" + folderUrl, " " + folderName).apply();
                 playDriveTracks(folderName, folderUrl, tracks, startIndex);
                 populateDriveDirectory(folderName, tracks);
             }
@@ -827,7 +830,7 @@ public class MainActivity extends AppCompatActivity {
         currentDisplayNames.add("Up");
         currentDisplayPaths.add(driveSourceFolderPath);
 
-        currentDisplayNames.add("⚙️ More Options");
+        currentDisplayNames.add(" More Options");
         currentDisplayPaths.add("DRIVE_FOLDER_OPTIONS");
 
         for (int i = 0; i < tracks.size(); i++) {
@@ -840,23 +843,23 @@ public class MainActivity extends AppCompatActivity {
 
     private void showDriveFolderOptionsDialog() {
         String[] options = {
-                "⭐ Add to Favorites",
-                "📚 Add to Book Shelf",
-                "🎵 Add to Playlist"
+                " Add to Favorites",
+                " Add to Book Shelf",
+                " Add to Playlist"
         };
         new AlertDialog.Builder(this)
                 .setTitle("Google Drive: " + currentDriveFolderName)
                 .setItems(options, (dialog, which) -> {
                     if (which == 0) {
                         addToLibrary("favorites", currentDriveFolderUrl);
-                        libPrefs.edit().putString("title_" + currentDriveFolderUrl, "📁 " + currentDriveFolderName).apply();
+                        libPrefs.edit().putString("title_" + currentDriveFolderUrl, " " + currentDriveFolderName).apply();
                         announceAccessibility(currentDriveFolderName + " added to favorites");
                         Toast.makeText(this, "Folder added to Favorites", Toast.LENGTH_SHORT).show();
                     } else if (which == 1) {
-                        libPrefs.edit().putString("title_" + currentDriveFolderUrl, "📁 " + currentDriveFolderName).apply();
+                        libPrefs.edit().putString("title_" + currentDriveFolderUrl, " " + currentDriveFolderName).apply();
                         showBookShelfSelectionDialog(currentDriveFolderUrl);
                     } else if (which == 2) {
-                        libPrefs.edit().putString("title_" + currentDriveFolderUrl, "📁 " + currentDriveFolderName).apply();
+                        libPrefs.edit().putString("title_" + currentDriveFolderUrl, " " + currentDriveFolderName).apply();
                         showPlaylistSelectionDialog(currentDriveFolderUrl);
                     }
                 })
@@ -920,10 +923,10 @@ public class MainActivity extends AppCompatActivity {
             updateExoPlayerPlayMode();
 
             String trackTitle = currentDriveTracks.get(finalIndex).title;
-            tvNowPlaying.setText("🎵 [Drive: " + folderName + "] " + trackTitle);
+            tvNowPlaying.setText(" [Drive: " + folderName + "] " + trackTitle);
             announceAccessibility("Playing Google Drive folder " + folderName + ". Track " + (finalIndex + 1) + " of " + currentDriveTracks.size() + ": " + trackTitle);
 
-            libPrefs.edit().putString("title_" + folderUrl, "📁 " + folderName).apply();
+            libPrefs.edit().putString("title_" + folderUrl, " " + folderName).apply();
             addToLibrary("history", folderUrl);
 
         } catch (Exception e) {
@@ -938,9 +941,9 @@ public class MainActivity extends AppCompatActivity {
         currentDriveTracks.clear();
         String streamUrl = GoogleDriveManager.getDirectStreamUrl(fileId);
         playNetworkStream(streamUrl);
-        tvNowPlaying.setText("🎵 Google Drive File");
+        tvNowPlaying.setText(" Google Drive File");
         announceAccessibility("Playing Google Drive file");
-        libPrefs.edit().putString("title_" + originalUrl, "🎵 Google Drive File").apply();
+        libPrefs.edit().putString("title_" + originalUrl, " Google Drive File").apply();
         addToLibrary("history", originalUrl);
     }
 
@@ -966,7 +969,7 @@ public class MainActivity extends AppCompatActivity {
                 libPrefs.edit()
                         .putString("zip_cache_" + uriStr, altDir.getAbsolutePath())
                         .putString("zip_name_" + uriStr, zName)
-                        .putString("title_" + uriStr, "📦 " + zName)
+                        .putString("title_" + uriStr, " " + zName)
                         .apply();
                 playZipTracks(zName, uriStr, tracks, 0);
                 return;
@@ -1008,7 +1011,7 @@ public class MainActivity extends AppCompatActivity {
                 libPrefs.edit()
                         .putString("zip_cache_" + uriStr, cacheDir.getAbsolutePath())
                         .putString("zip_name_" + uriStr, zipName)
-                        .putString("title_" + uriStr, "📦 " + zipName)
+                        .putString("title_" + uriStr, " " + zipName)
                         .apply();
                 playZipTracks(zipName, uriStr, audioTracks, 0);
             }
@@ -1031,7 +1034,11 @@ public class MainActivity extends AppCompatActivity {
         eqBandsContainer = findViewById(R.id.eqBandsContainer);
 
         layoutTopTabBar = findViewById(R.id.layoutTopTabBar);
+        cardFolderHeader = findViewById(R.id.cardFolderHeader);
         cardNowPlaying = findViewById(R.id.cardNowPlaying);
+        if (cardNowPlaying != null) {
+            cardNowPlaying.setOnClickListener(v -> showNowPlayingOptionsDialog());
+        }
         cardPlaybackControls = findViewById(R.id.cardPlaybackControls);
         layoutLibHeader = findViewById(R.id.layoutLibHeader);
 
@@ -1051,6 +1058,13 @@ public class MainActivity extends AppCompatActivity {
         headerShortcuts = findViewById(R.id.headerShortcuts);
 
         tvNowPlaying = findViewById(R.id.tvNowPlaying);
+        if (tvNowPlaying != null) {
+            tvNowPlaying.setOnClickListener(v -> showNowPlayingOptionsDialog());
+        }
+        tvNowPlayingArtistAlbum = findViewById(R.id.tvNowPlayingArtistAlbum);
+        if (tvNowPlayingArtistAlbum != null) {
+            tvNowPlayingArtistAlbum.setOnClickListener(v -> showNowPlayingOptionsDialog());
+        }
         tvCurrentFolder = findViewById(R.id.tvCurrentFolder);
         tvCurrentFolder.setOnClickListener(v -> showStorageSelectionDialog());
         tvCurrentFolder.setOnLongClickListener(v -> {
@@ -1197,25 +1211,25 @@ public class MainActivity extends AppCompatActivity {
                     String path = (position < currentDisplayPaths.size()) ? currentDisplayPaths.get(position) : "";
                     String displayName = name;
 
-                    boolean isZip = name.startsWith("📦 ") || (path != null && ZipMediaManager.isZipFile(path));
+                    boolean isZip = name.startsWith("\uD83D\uDCE6 ") || (path != null && ZipMediaManager.isZipFile(path));
                     boolean isUp = "Up".equals(name) || name.startsWith("Up (");
-                    boolean isStorage = name.startsWith("💾") || "STORAGE_ROOT".equals(path);
+                    boolean isStorage = name.startsWith("\uD83D\uDCBE") || "STORAGE_ROOT".equals(path);
                     boolean isDir = path != null && (new File(path).isDirectory() || (isBrowsingZip && !ZipMediaManager.isAudioFile(path)));
 
-                    if (name.startsWith("📌 ")) {
-                        if (tvIcon != null) tvIcon.setText("📌");
+                    if (name.startsWith(" ")) {
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                         displayName = name.substring(3);
-                    } else if (name.startsWith("📦 ")) {
-                        if (tvIcon != null) tvIcon.setText("📦");
+                    } else if (name.startsWith(" ")) {
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                         displayName = name.substring(3);
                     } else if (isUp) {
-                        if (tvIcon != null) tvIcon.setText("⬆️");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     } else if (isStorage) {
-                        if (tvIcon != null) tvIcon.setText("💾");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     } else if (isDir) {
-                        if (tvIcon != null) tvIcon.setText("📁");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     } else {
-                        if (tvIcon != null) tvIcon.setText("🎵");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     }
 
                     if (tvText != null) {
@@ -1226,7 +1240,7 @@ public class MainActivity extends AppCompatActivity {
                     if (isCurrentlyPlaying) {
                         if (tvStatus != null) {
                             tvStatus.setVisibility(View.VISIBLE);
-                            tvStatus.setText("▶ PLAYING");
+                            tvStatus.setText("PLAYING");
                         }
                         if (tvText != null) {
                             tvText.setTextColor(Color.parseColor("#80D8FF"));
@@ -1370,29 +1384,29 @@ public class MainActivity extends AppCompatActivity {
                     boolean isActionItem = name.startsWith("[ +") || "CREATE_NEW_SHELF".equals(path) || "CREATE_NEW_PLAYLIST".equals(path);
                     boolean isShelf = (libraryMode == 4);
                     boolean isPlaylist = (libraryMode == 2);
-                    boolean isDir = name.startsWith("📁 ") || (path != null && new File(path).isDirectory());
-                    boolean isZip = name.startsWith("📦 ") || (path != null && ZipMediaManager.isZipFile(path));
-                    boolean isStream = name.startsWith("☁️ ") || (path != null && (path.startsWith("http://") || path.startsWith("https://")));
+                    boolean isDir = name.startsWith("\uD83D\uDCC1 ") || (path != null && new File(path).isDirectory());
+                    boolean isZip = name.startsWith("\uD83D\uDCE6 ") || (path != null && ZipMediaManager.isZipFile(path));
+                    boolean isStream = name.startsWith("\u2601\uFE0F ") || name.startsWith("\u2601 ") || (path != null && (path.startsWith("http://") || path.startsWith("https://")));
                     boolean isAudio = !isActionItem && !isShelf && !isPlaylist && !isDir && !isZip && !isStream && path != null && ZipMediaManager.isAudioFile(path);
 
                     if (isActionItem) {
-                        if (tvIcon != null) tvIcon.setText("➕");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     } else if (isShelf) {
-                        if (tvIcon != null) tvIcon.setText("📚");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     } else if (isPlaylist) {
-                        if (tvIcon != null) tvIcon.setText("📋");
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
                     } else if (isDir) {
-                        if (tvIcon != null) tvIcon.setText("📁");
-                        if (displayName.startsWith("📁 ")) displayName = displayName.substring(3);
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
+                        if (displayName.startsWith("\uD83D\uDCC1 ")) displayName = displayName.substring(3);
                     } else if (isZip) {
-                        if (tvIcon != null) tvIcon.setText("📦");
-                        if (displayName.startsWith("📦 ")) displayName = displayName.substring(3);
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
+                        if (displayName.startsWith("\uD83D\uDCC1 ")) displayName = displayName.substring(3);
                     } else if (isStream) {
-                        if (tvIcon != null) tvIcon.setText("☁️");
-                        if (displayName.startsWith("☁️ ")) displayName = displayName.substring(3);
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
+                        if (displayName.startsWith("\uD83D\uDCC1 ")) displayName = displayName.substring(3);
                     } else {
-                        if (tvIcon != null) tvIcon.setText("🎵");
-                        if (displayName.startsWith("🎵 ")) displayName = displayName.substring(3);
+                        if (tvIcon != null) tvIcon.setVisibility(View.GONE);
+                        if (displayName.startsWith("\uD83D\uDCC1 ")) displayName = displayName.substring(3);
                     }
 
                     if (tvText != null) {
@@ -1403,7 +1417,7 @@ public class MainActivity extends AppCompatActivity {
                     if (isCurrentlyPlaying) {
                         if (tvStatus != null) {
                             tvStatus.setVisibility(View.VISIBLE);
-                            tvStatus.setText("▶ PLAYING");
+                            tvStatus.setText("PLAYING");
                         }
                         if (tvText != null) {
                             tvText.setTextColor(Color.parseColor("#80D8FF"));
@@ -2017,11 +2031,11 @@ public class MainActivity extends AppCompatActivity {
             String lastZip = memPrefs.getString("global_last_zip_name", "");
             String lastDrive = memPrefs.getString("global_last_drive_name", "");
             if (!lastZip.isEmpty()) {
-                tvNowPlaying.setText("⏸ Last: [" + lastZip + "] " + dispName + " (" + formatTime(lastPos) + ")");
+                tvNowPlaying.setText(" Last: [" + lastZip + "] " + dispName + " (" + formatTime(lastPos) + ")");
             } else if (!lastDrive.isEmpty()) {
-                tvNowPlaying.setText("⏸ Last: [Drive: " + lastDrive + "] " + dispName + " (" + formatTime(lastPos) + ")");
+                tvNowPlaying.setText(" Last: [Drive: " + lastDrive + "] " + dispName + " (" + formatTime(lastPos) + ")");
             } else {
-                tvNowPlaying.setText("⏸ Last: " + dispName + " (" + formatTime(lastPos) + ")");
+                tvNowPlaying.setText(" Last: " + dispName + " (" + formatTime(lastPos) + ")");
             }
         }
     }
@@ -2230,8 +2244,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateSeekButtons() {
         String txt = (seekStep == 60000) ? "1m" : (seekStep / 1000) + "s";
-        btnRewind.setText("⏪ " + txt);
-        btnForward.setText(txt + " ⏩");
+        btnRewind.setText(" " + txt);
+        btnForward.setText(txt + " ");
         btnRewind.setContentDescription(txt + " backward");
         btnForward.setContentDescription(txt + " forward");
     }
@@ -2248,9 +2262,9 @@ public class MainActivity extends AppCompatActivity {
 
             String trackName = new File(currentPlayingFile).getName();
             sb.append("Track: ").append(trackName).append("\n");
-            sb.append("• Current: ").append(formatTime(current)).append("\n");
-            sb.append("• Total: ").append(formatTime(total)).append("\n");
-            sb.append("• Remaining: ").append(formatTime(remaining)).append("\n\n");
+            sb.append(", Current: ").append(formatTime(current)).append("\n");
+            sb.append(", Total: ").append(formatTime(total)).append("\n");
+            sb.append(", Remaining: ").append(formatTime(remaining)).append("\n\n");
 
             speechSb.append("Track total time ").append(formatTimeSpeech(total))
                     .append(". Current time ").append(formatTimeSpeech(current))
@@ -2277,9 +2291,9 @@ public class MainActivity extends AppCompatActivity {
             }
 
             sb.append(folderName).append(":\n");
-            sb.append("• Files: ").append(folderFileCount).append("\n");
+            sb.append(", Files: ").append(folderFileCount).append("\n");
             if (folderTotalDur > 0) {
-                sb.append("• Total Duration: ").append(FolderMetadataManager.formatDurationShort(folderTotalDur));
+                sb.append(", Total Duration: ").append(FolderMetadataManager.formatDurationShort(folderTotalDur));
                 speechSb.append(folderName).append(" has ").append(folderFileCount).append(folderFileCount == 1 ? " file. " : " files. ")
                         .append("Total folder duration is ").append(FolderMetadataManager.formatDurationSpeech(folderTotalDur)).append(".");
             } else {
@@ -2316,19 +2330,272 @@ public class MainActivity extends AppCompatActivity {
         final String finalFolderName = folderName;
         FolderMetadataManager.FolderMeta meta = FolderMetadataManager.getCachedMeta(this, currentDir);
         if (meta != null && meta.totalDurationMs > 0) {
-            String msg = finalFolderName + "\n" + meta.fileCount + " tracks • Total Duration: " + FolderMetadataManager.formatDurationShort(meta.totalDurationMs);
+            String msg = finalFolderName + "\n" + meta.fileCount + " tracks , Total Duration: " + FolderMetadataManager.formatDurationShort(meta.totalDurationMs);
             String speech = finalFolderName + " contains " + meta.fileCount + " tracks. Total duration is " + FolderMetadataManager.formatDurationSpeech(meta.totalDurationMs);
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
             announceAccessibility(speech);
         } else {
             announceAccessibility("Calculating duration for " + finalFolderName + "...");
             FolderMetadataManager.getFolderInfoAsync(this, currentDir, m -> {
-                String durStr = m.totalDurationMs > 0 ? " • Total Duration: " + FolderMetadataManager.formatDurationShort(m.totalDurationMs) : "";
+                String durStr = m.totalDurationMs > 0 ? " , Total Duration: " + FolderMetadataManager.formatDurationShort(m.totalDurationMs) : "";
                 String msg = finalFolderName + "\n" + m.fileCount + " tracks" + durStr;
                 String speech = finalFolderName + " contains " + m.fileCount + " tracks." + (m.totalDurationMs > 0 ? " Total duration is " + FolderMetadataManager.formatDurationSpeech(m.totalDurationMs) : "");
                 Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show();
                 announceAccessibility(speech);
             });
+        }
+    }
+
+    public void updateNowPlayingDisplay(String title, String artist, String album) {
+        if (tvNowPlaying == null) return;
+        if (title == null || title.isEmpty() || "Not Playing".equals(title)) {
+            tvNowPlaying.setText("Not Playing");
+            if (tvNowPlayingArtistAlbum != null) {
+                tvNowPlayingArtistAlbum.setText("Select a track to play");
+                tvNowPlayingArtistAlbum.setVisibility(View.VISIBLE);
+            }
+            if (cardNowPlaying != null) {
+                cardNowPlaying.setContentDescription("Not Playing. Select a track to play.");
+            }
+            return;
+        }
+
+        tvNowPlaying.setText(title);
+
+        StringBuilder sub = new StringBuilder();
+        if (artist != null && !artist.trim().isEmpty()) {
+            sub.append(artist.trim());
+        }
+        if (album != null && !album.trim().isEmpty()) {
+            if (sub.length() > 0) sub.append(" - ");
+            sub.append(album.trim());
+        }
+
+        if (sub.length() > 0) {
+            if (tvNowPlayingArtistAlbum != null) {
+                tvNowPlayingArtistAlbum.setText(sub.toString());
+                tvNowPlayingArtistAlbum.setVisibility(View.VISIBLE);
+            }
+            if (cardNowPlaying != null) {
+                cardNowPlaying.setContentDescription("Now Playing: " + title + ", " + sub + ". Double tap for options.");
+            }
+        } else {
+            if (!currentZipName.isEmpty()) {
+                if (tvNowPlayingArtistAlbum != null) {
+                    tvNowPlayingArtistAlbum.setText("Archive: " + currentZipName);
+                    tvNowPlayingArtistAlbum.setVisibility(View.VISIBLE);
+                }
+            } else if (!currentDriveFolderName.isEmpty()) {
+                if (tvNowPlayingArtistAlbum != null) {
+                    tvNowPlayingArtistAlbum.setText("Drive: " + currentDriveFolderName);
+                    tvNowPlayingArtistAlbum.setVisibility(View.VISIBLE);
+                }
+            } else if (currentDir != null && !currentDir.isEmpty()) {
+                if (tvNowPlayingArtistAlbum != null) {
+                    tvNowPlayingArtistAlbum.setText("Folder: " + new File(currentDir).getName());
+                    tvNowPlayingArtistAlbum.setVisibility(View.VISIBLE);
+                }
+            } else {
+                if (tvNowPlayingArtistAlbum != null) {
+                    tvNowPlayingArtistAlbum.setVisibility(View.GONE);
+                }
+            }
+            if (cardNowPlaying != null) {
+                cardNowPlaying.setContentDescription("Now Playing: " + title + ". Double tap for options.");
+            }
+        }
+    }
+
+    public void loadTrackMetadataAsync(String filePath, String fallbackTitle) {
+        if (filePath == null || filePath.isEmpty()) {
+            updateNowPlayingDisplay("Not Playing", null, null);
+            return;
+        }
+
+        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+            updateNowPlayingDisplay(fallbackTitle != null ? fallbackTitle : "Online Stream", "Internet Radio", null);
+            return;
+        }
+
+        if (!currentDriveFolderName.isEmpty()) {
+            updateNowPlayingDisplay(fallbackTitle != null ? fallbackTitle : new File(filePath).getName(), "Google Drive", currentDriveFolderName);
+            return;
+        }
+
+        if (!currentZipName.isEmpty()) {
+            updateNowPlayingDisplay(fallbackTitle != null ? fallbackTitle : new File(filePath).getName(), "Archive", currentZipName);
+            return;
+        }
+
+        String initialTitle = (fallbackTitle != null && !fallbackTitle.isEmpty()) ? fallbackTitle : new File(filePath).getName();
+        updateNowPlayingDisplay(initialTitle, null, null);
+
+        new Thread(() -> {
+            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            try {
+                mmr.setDataSource(filePath);
+                String title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+                String artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                String album = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM);
+
+                String finalTitle = (title != null && !title.trim().isEmpty()) ? title.trim() : initialTitle;
+                runOnUiThread(() -> {
+                    if (filePath.equals(currentPlayingFile)) {
+                        updateNowPlayingDisplay(finalTitle, artist, album);
+                    }
+                });
+            } catch (Exception ignored) {
+            } finally {
+                try { mmr.release(); } catch (Exception ignored) {}
+            }
+        }).start();
+    }
+
+    private void showNowPlayingOptionsDialog() {
+        if (currentPlayingFile == null || currentPlayingFile.isEmpty() || "Not Playing".equals(tvNowPlaying.getText().toString())) {
+            Toast.makeText(this, "No track is currently playing", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String trackName = tvNowPlaying.getText().toString();
+        String subText = (tvNowPlayingArtistAlbum != null && tvNowPlayingArtistAlbum.getVisibility() == View.VISIBLE)
+                ? tvNowPlayingArtistAlbum.getText().toString() : "";
+
+        String dialogTitle = trackName;
+        if (!subText.isEmpty() && !"Select a track to play".equals(subText)) {
+            dialogTitle += "\n" + subText;
+        }
+
+        String[] options = new String[]{
+                "Share Track",
+                "Set as Ringtone",
+                "Add to Favorites",
+                "Add to Playlist",
+                "Add to Book Shelf",
+                "Track Details"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle(dialogTitle)
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // Share Track
+                            if (currentPlayingFile.startsWith("http")) {
+                                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                                shareIntent.setType("text/plain");
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, currentPlayingFile);
+                                startActivity(Intent.createChooser(shareIntent, "Share Track"));
+                            } else {
+                                File f = new File(currentPlayingFile);
+                                if (f.exists()) {
+                                    shareFileDirectly(f);
+                                } else {
+                                    Toast.makeText(this, "File not found", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                            break;
+                        case 1: // Set as Ringtone
+                            setTrackAsRingtone(currentPlayingFile);
+                            break;
+                        case 2: // Add to Favorites
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
+                            addToLibrary("favorites", currentPlayingFile);
+                            Toast.makeText(MainActivity.this, "Track added to Favorites", Toast.LENGTH_SHORT).show();
+                            announceAccessibility("Track added to favorites");
+                            break;
+                        case 3: // Add to Playlist
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
+                            showPlaylistSelectionDialog(currentPlayingFile);
+                            break;
+                        case 4: // Add to Book Shelf
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
+                            showBookShelfSelectionDialog(currentPlayingFile);
+                            break;
+                        case 5: // Track Details
+                            showTimeDetails();
+                            break;
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void setTrackAsRingtone(String filePath) {
+        if (filePath == null || filePath.isEmpty() || filePath.startsWith("http")) {
+            Toast.makeText(this, "Cannot set streaming audio as ringtone", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            Toast.makeText(this, "File not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(this)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Permission Needed")
+                        .setMessage("To set this track as your ringtone, please allow 'Modify system settings' permission on the next screen.")
+                        .setPositiveButton("Continue", (dialog, which) -> {
+                            try {
+                                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                                intent.setData(Uri.parse("package:" + getPackageName()));
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                Toast.makeText(this, "Could not open settings", Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                return;
+            }
+        }
+
+        MediaScannerConnection.scanFile(this, new String[]{file.getAbsolutePath()}, null, (scannedPath, uri) -> {
+            Uri targetUri = uri;
+            if (targetUri == null) {
+                try {
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.MediaColumns.DATA, file.getAbsolutePath());
+                    values.put(MediaStore.MediaColumns.TITLE, file.getName());
+                    values.put(MediaStore.MediaColumns.MIME_TYPE, getMimeTypeForFile(file));
+                    values.put(MediaStore.Audio.Media.IS_RINGTONE, true);
+                    values.put(MediaStore.Audio.Media.IS_NOTIFICATION, false);
+                    values.put(MediaStore.Audio.Media.IS_ALARM, false);
+                    values.put(MediaStore.Audio.Media.IS_MUSIC, true);
+                    targetUri = getContentResolver().insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed inserting ringtone into MediaStore", e);
+                }
+            }
+            if (targetUri != null) {
+                applyRingtoneUri(targetUri, file.getName());
+            } else {
+                runOnUiThread(() -> Toast.makeText(this, "Unable to access file as ringtone", Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void applyRingtoneUri(Uri ringtoneUri, String fileName) {
+        try {
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Audio.Media.IS_RINGTONE, true);
+            getContentResolver().update(ringtoneUri, values, null, null);
+        } catch (Exception ignored) {}
+
+        try {
+            RingtoneManager.setActualDefaultRingtoneUri(
+                    getApplicationContext(),
+                    RingtoneManager.TYPE_RINGTONE,
+                    ringtoneUri
+            );
+            runOnUiThread(() -> {
+                Toast.makeText(this, "Set as Ringtone: " + fileName, Toast.LENGTH_SHORT).show();
+                announceAccessibility("Ringtone set successfully: " + fileName);
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set default ringtone", e);
+            runOnUiThread(() -> Toast.makeText(this, "Failed to set ringtone: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }
     }
 
@@ -2545,9 +2812,9 @@ public class MainActivity extends AppCompatActivity {
         boolean isPlaying = mediaPlayer.isPlaying();
 
         String rawTitle = (tvNowPlaying != null) ? tvNowPlaying.getText().toString() : "";
-        if (rawTitle.startsWith("🎵 ")) {
+        if (rawTitle.startsWith(" ")) {
             rawTitle = rawTitle.substring(3);
-        } else if (rawTitle.startsWith("📻 ")) {
+        } else if (rawTitle.startsWith(" ")) {
             rawTitle = rawTitle.substring(3);
         }
         if (rawTitle.isEmpty() && currentPlayingFile != null && !currentPlayingFile.isEmpty()) {
@@ -2929,19 +3196,12 @@ public class MainActivity extends AppCompatActivity {
                 if (currentPlayingFile != null && (currentPlayingFile.startsWith("http://") || currentPlayingFile.startsWith("https://"))) {
                     CharSequence title = mediaMetadata.title;
                     CharSequence artist = mediaMetadata.artist;
+                    CharSequence album = mediaMetadata.albumTitle;
                     CharSequence station = mediaMetadata.station;
-                    StringBuilder sb = new StringBuilder("📻 ");
-                    if (title != null && title.length() > 0) {
-                        sb.append(title);
-                        if (artist != null && artist.length() > 0) {
-                            sb.append(" - ").append(artist);
-                        }
-                    } else if (station != null && station.length() > 0) {
-                        sb.append(station);
-                    }
-                    if (sb.length() > 3) {
-                        tvNowPlaying.setText(sb.toString());
-                    }
+                    String mainTitle = (title != null && title.length() > 0) ? title.toString() : (station != null ? station.toString() : "Online Stream");
+                    String art = (artist != null && artist.length() > 0) ? artist.toString() : (station != null ? station.toString() : "Internet Radio");
+                    String alb = (album != null && album.length() > 0) ? album.toString() : null;
+                    updateNowPlayingDisplay(mainTitle, art, alb);
                 }
             }
 
@@ -2990,11 +3250,11 @@ public class MainActivity extends AppCompatActivity {
                     int totalTracks = currentAudioList.size();
 
                     if (!currentZipName.isEmpty() && totalTracks > 1) {
-                        tvNowPlaying.setText("🎵 [" + currentZipName + "] " + fileName);
+                        updateNowPlayingDisplay(fileName, "Archive", currentZipName);
                     } else if (!currentDriveFolderName.isEmpty() && totalTracks > 1) {
-                        tvNowPlaying.setText("🎵 [Drive: " + currentDriveFolderName + "] " + fileName);
+                        updateNowPlayingDisplay(fileName, "Google Drive", currentDriveFolderName);
                     } else {
-                        tvNowPlaying.setText("🎵 " + fileName);
+                        loadTrackMetadataAsync(currentPlayingFile, fileName);
                     }
                     if (fileListAdapter != null) {
                         fileListAdapter.notifyDataSetChanged();
@@ -3005,7 +3265,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (!currentPlayingFile.startsWith("http")) {
                         if (!currentZipFilePath.isEmpty()) {
-                            libPrefs.edit().putString("title_" + currentZipFilePath, "📦 " + currentZipName).apply();
+                            libPrefs.edit().putString("title_" + currentZipFilePath, " " + currentZipName).apply();
                             addToLibrary("history", currentZipFilePath);
                             addToLibrary("history_folders", currentZipFilePath);
                             addToLibrary("history_tracks", currentPlayingFile);
@@ -3016,12 +3276,12 @@ public class MainActivity extends AppCompatActivity {
                             if (parent != null) {
                                 String parentPath = parent.getAbsolutePath();
                                 addToLibrary("history_folders", parentPath);
-                                libPrefs.edit().putString("title_" + parentPath, "📁 " + parent.getName()).apply();
+                                libPrefs.edit().putString("title_" + parentPath, " " + parent.getName()).apply();
                             }
                         }
                     } else if (!currentDriveFolderUrl.isEmpty()) {
                         if (!currentDriveFolderName.isEmpty()) {
-                            libPrefs.edit().putString("title_" + currentDriveFolderUrl, "📁 " + currentDriveFolderName).apply();
+                            libPrefs.edit().putString("title_" + currentDriveFolderUrl, " " + currentDriveFolderName).apply();
                         }
                         addToLibrary("history", currentDriveFolderUrl);
                         addToLibrary("history_folders", currentDriveFolderUrl);
@@ -3032,7 +3292,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (currentPlaylistName != null && !currentPlaylistName.isEmpty()) {
                         addToLibrary("history_playlists", currentPlaylistName);
-                        libPrefs.edit().putString("title_" + currentPlaylistName, "🎵 " + currentPlaylistName).apply();
+                        libPrefs.edit().putString("title_" + currentPlaylistName, " " + currentPlaylistName).apply();
                     }
 
                     if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
@@ -3150,19 +3410,19 @@ public class MainActivity extends AppCompatActivity {
     private void updateExoPlayerPlayMode(boolean announce) {
         if (btnPlayMode != null) {
             if (playMode == 0) {
-                btnPlayMode.setText("▶️ Mode: Play All");
+                btnPlayMode.setText(" Mode: Play All");
                 btnPlayMode.setContentDescription("Play mode: Play all tracks and stop at end");
                 if (announce) announceAccessibility("Play mode: Play all tracks and stop at end");
             } else if (playMode == 1) {
-                btnPlayMode.setText("🔂 Mode: Repeat One");
+                btnPlayMode.setText(" Mode: Repeat One");
                 btnPlayMode.setContentDescription("Play mode: Repeat current track");
                 if (announce) announceAccessibility("Play mode: Repeat current track");
             } else if (playMode == 2) {
-                btnPlayMode.setText("🔁 Mode: Repeat All");
+                btnPlayMode.setText(" Mode: Repeat All");
                 btnPlayMode.setContentDescription("Play mode: Repeat all tracks continuously");
                 if (announce) announceAccessibility("Play mode: Repeat all tracks continuously");
             } else if (playMode == 3) {
-                btnPlayMode.setText("🔀 Mode: Shuffle");
+                btnPlayMode.setText(" Mode: Shuffle");
                 btnPlayMode.setContentDescription("Play mode: Shuffle tracks and stop at end");
                 if (announce) announceAccessibility("Play mode: Shuffle tracks and stop at end");
             }
@@ -3213,7 +3473,7 @@ public class MainActivity extends AppCompatActivity {
         String[] itemTitles = new String[playQueue.size()];
         for (int i = 0; i < playQueue.size(); i++) {
             QueueItem item = playQueue.get(i);
-            String tag = (item.type == QueueItem.TYPE_TRACK) ? "🎵 [Track] " : ((item.type == QueueItem.TYPE_FOLDER) ? "📁 [Folder] " : "📦 [ZIP] ");
+            String tag = (item.type == QueueItem.TYPE_TRACK) ? " [Track] " : ((item.type == QueueItem.TYPE_FOLDER) ? " [Folder] " : " [ZIP] ");
             itemTitles[i] = (i + 1) + ". " + tag + item.title;
         }
 
@@ -3238,7 +3498,7 @@ public class MainActivity extends AppCompatActivity {
     private void showQueueItemActionDialog(int index) {
         if (index < 0 || index >= playQueue.size()) return;
         QueueItem item = playQueue.get(index);
-        String[] opts = {"▶ Play Now", "❌ Remove from Queue"};
+        String[] opts = {" Play Now", " Remove from Queue"};
         new AlertDialog.Builder(this)
                 .setTitle(item.title)
                 .setItems(opts, (d, w) -> {
@@ -4067,7 +4327,7 @@ public class MainActivity extends AppCompatActivity {
                 if (sb.length() > 0) sb.append("|");
                 sb.append(f);
                 if (!libPrefs.contains("title_" + f)) {
-                    libPrefs.edit().putString("title_" + f, "📁 " + new File(f).getName()).apply();
+                    libPrefs.edit().putString("title_" + f, " " + new File(f).getName()).apply();
                 }
             }
             libPrefs.edit().putString("history_folders", sb.toString()).apply();
@@ -4096,32 +4356,32 @@ public class MainActivity extends AppCompatActivity {
         if (libraryMode == 0) {
             updateHistoryFilterUI();
             if (historyFilterMode == 0) {
-                title = "🕒 History: Tracks (" + count + ")";
+                title = " History: Tracks (" + count + ")";
                 emptyText = "No played tracks yet.\nPlayed audio tracks will appear here.";
             } else if (historyFilterMode == 1) {
-                title = "🕒 History: Folders (" + count + ")";
+                title = " History: Folders (" + count + ")";
                 emptyText = "No played folders yet.\nFolders you play music from will appear here.";
             } else {
-                title = "🕒 History: Playlists (" + count + ")";
+                title = " History: Playlists (" + count + ")";
                 emptyText = "No played playlists yet.\nPlaylists you play will appear here.";
             }
         } else if (libraryMode == 1) {
-            title = "⭐ Favorites (" + count + ")";
+            title = " Favorites (" + count + ")";
             emptyText = "No favorites added yet.\nLong press any file or folder to add to Favorites.";
         } else if (libraryMode == 2) {
-            title = "🎵 Playlists (" + count + ")";
+            title = " Playlists (" + count + ")";
             showNew = true;
             emptyText = "No playlists created yet.\nTap '+ New' to create a playlist.";
         } else if (libraryMode == 3) {
-            title = "🎵 " + currentPlaylistName + " (" + count + ")";
+            title = " " + currentPlaylistName + " (" + count + ")";
             showBack = true;
             emptyText = "This playlist is empty.\nLong press any audio file to add to this playlist.";
         } else if (libraryMode == 4) {
-            title = "📚 Bookshelves (" + count + ")";
+            title = " Bookshelves (" + count + ")";
             showNew = true;
             emptyText = "No bookshelves created yet.\nTap '+ New' to create a bookshelf.";
         } else {
-            title = "📚 " + currentShelfName + " (" + count + ")";
+            title = " " + currentShelfName + " (" + count + ")";
             showBack = true;
             emptyText = "This bookshelf is empty.\nLong press any folder or audio file to add to this shelf.";
         }
@@ -4182,9 +4442,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupLibraryFeatures() {
         btnHist.setOnClickListener(v -> {
-            libraryMode = 0;
+            libraryMode = 4;
             loadHistoryData();
-            announceAccessibility("Showing History");
+            announceAccessibility("Showing Book Shelves");
         });
 
         btnFav.setOnClickListener(v -> {
@@ -4373,7 +4633,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (isAudio || f.exists() || getContentUriForFilePath(path) != null) {
             if (libraryMode == 3 && !currentPlaylistName.isEmpty()) {
                 addToLibrary("history_playlists", currentPlaylistName);
-                libPrefs.edit().putString("title_" + currentPlaylistName, "🎵 " + currentPlaylistName).apply();
+                libPrefs.edit().putString("title_" + currentPlaylistName, " " + currentPlaylistName).apply();
             }
             switchTab(1);
             currentAudioList.clear();
@@ -4652,38 +4912,38 @@ public class MainActivity extends AppCompatActivity {
         } else {
             List<String> optionsList = new ArrayList<>();
             if (libraryMode == 0 && historyFilterMode == 1) { // History Folders
-                optionsList.add("📁 Open Folder");
-                optionsList.add("⏳ Add Folder to Queue");
-                optionsList.add("⭐ Add to Favorites");
-                optionsList.add("📚 Add to Book Shelf");
-                optionsList.add("🗑️ Remove from History");
+                optionsList.add(" Open Folder");
+                optionsList.add(" Add Folder to Queue");
+                optionsList.add(" Add to Favorites");
+                optionsList.add(" Add to Book Shelf");
+                optionsList.add(" Remove from History");
             } else if (libraryMode == 0 && historyFilterMode == 2) { // History Playlists
-                optionsList.add("🎵 Open Playlist");
-                optionsList.add("🗑️ Remove from History");
+                optionsList.add(" Open Playlist");
+                optionsList.add(" Remove from History");
             } else {
-                optionsList.add("▶ Play Now");
-                optionsList.add("⏳ Add to Queue");
+                optionsList.add(" Play Now");
+                optionsList.add(" Add to Queue");
                 if (libraryMode == 0) { // History Tracks
-                    optionsList.add("⭐ Add to Favorites");
-                    optionsList.add("📚 Add to Book Shelf");
-                    optionsList.add("🎵 Add to Playlist");
-                    optionsList.add("↗ Share");
-                    optionsList.add("🗑️ Remove from History");
+                    optionsList.add(" Add to Favorites");
+                    optionsList.add(" Add to Book Shelf");
+                    optionsList.add(" Add to Playlist");
+                    optionsList.add(" Share");
+                    optionsList.add(" Remove from History");
                 } else if (libraryMode == 1) { // Favorites
-                    optionsList.add("📚 Add to Book Shelf");
-                    optionsList.add("🎵 Add to Playlist");
-                    optionsList.add("↗ Share");
-                    optionsList.add("🗑️ Remove from Favorites");
+                    optionsList.add(" Add to Book Shelf");
+                    optionsList.add(" Add to Playlist");
+                    optionsList.add(" Share");
+                    optionsList.add(" Remove from Favorites");
                 } else if (libraryMode == 5) { // Book Shelf
-                    optionsList.add("⭐ Add to Favorites");
-                    optionsList.add("🎵 Add to Playlist");
-                    optionsList.add("↗ Share");
-                    optionsList.add("🗑️ Remove from Shelf");
+                    optionsList.add(" Add to Favorites");
+                    optionsList.add(" Add to Playlist");
+                    optionsList.add(" Share");
+                    optionsList.add(" Remove from Shelf");
                 } else { // Playlist
-                    optionsList.add("⭐ Add to Favorites");
-                    optionsList.add("📚 Add to Book Shelf");
-                    optionsList.add("↗ Share");
-                    optionsList.add("🗑️ Remove from Playlist");
+                    optionsList.add(" Add to Favorites");
+                    optionsList.add(" Add to Book Shelf");
+                    optionsList.add(" Share");
+                    optionsList.add(" Remove from Playlist");
                 }
             }
 
@@ -4866,7 +5126,7 @@ public class MainActivity extends AppCompatActivity {
                         resetAB();
                         updateMediaSessionState(PlaybackState.STATE_PLAYING);
                         String trackTitle = dt.title;
-                        tvNowPlaying.setText("🎵 [Drive: " + currentDriveFolderName + "] " + trackTitle);
+                        tvNowPlaying.setText(" [Drive: " + currentDriveFolderName + "] " + trackTitle);
                         announceAccessibility("Playing Track " + (trackIndex + 1) + " of " + currentDriveTracks.size() + ": " + trackTitle);
                     } else {
                         playDriveTracks(currentDriveFolderName, currentDriveFolderUrl, new ArrayList<>(currentDriveTracks), trackIndex);
@@ -4874,16 +5134,16 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 } else if (action == R.id.action_file_favorite) {
                     addToLibrary("favorites", dt.streamUrl);
-                    libPrefs.edit().putString("title_" + dt.streamUrl, "🎵 " + dt.title).apply();
+                    libPrefs.edit().putString("title_" + dt.streamUrl, " " + dt.title).apply();
                     announceAccessibility("Track added to favorites");
                     Toast.makeText(this, "Track added to Favorites", Toast.LENGTH_SHORT).show();
                     return true;
                 } else if (action == R.id.action_file_playlist) {
-                    libPrefs.edit().putString("title_" + dt.streamUrl, "🎵 " + dt.title).apply();
+                    libPrefs.edit().putString("title_" + dt.streamUrl, " " + dt.title).apply();
                     showPlaylistSelectionDialog(dt.streamUrl);
                     return true;
                 } else if (action == R.id.action_file_bookshelf) {
-                    libPrefs.edit().putString("title_" + currentDriveFolderUrl, "📁 " + currentDriveFolderName).apply();
+                    libPrefs.edit().putString("title_" + currentDriveFolderUrl, " " + currentDriveFolderName).apply();
                     showBookShelfSelectionDialog(currentDriveFolderUrl);
                     return true;
                 }
@@ -4917,19 +5177,19 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         } else if (action == R.id.action_file_favorite) {
-            String prefix = f.isDirectory() ? "📁 " : (ZipMediaManager.isZipFile(f.getName()) ? "📦 " : "🎵 ");
+            String prefix = f.isDirectory() ? " " : (ZipMediaManager.isZipFile(f.getName()) ? " " : " ");
             libPrefs.edit().putString("title_" + path, prefix + f.getName()).apply();
             addToLibrary("favorites", path);
             announceAccessibility(f.isDirectory() ? "Folder added to favorites" : "Added to favorites");
             Toast.makeText(this, f.isDirectory() ? "Folder added to Favorites" : "Added to Favorites", Toast.LENGTH_SHORT).show();
             return true;
         } else if (action == R.id.action_file_bookshelf) {
-            String prefix = f.isDirectory() ? "📁 " : (ZipMediaManager.isZipFile(f.getName()) ? "📦 " : "🎵 ");
+            String prefix = f.isDirectory() ? " " : (ZipMediaManager.isZipFile(f.getName()) ? " " : " ");
             libPrefs.edit().putString("title_" + path, prefix + f.getName()).apply();
             showBookShelfSelectionDialog(path);
             return true;
         } else if (action == R.id.action_file_playlist) {
-            String prefix = f.isDirectory() ? "📁 " : (ZipMediaManager.isZipFile(f.getName()) ? "📦 " : "🎵 ");
+            String prefix = f.isDirectory() ? " " : (ZipMediaManager.isZipFile(f.getName()) ? " " : " ");
             libPrefs.edit().putString("title_" + path, prefix + f.getName()).apply();
             showPlaylistSelectionDialog(path);
             return true;
@@ -5008,17 +5268,17 @@ public class MainActivity extends AppCompatActivity {
             if (trackIndex >= 0 && trackIndex < currentDriveTracks.size()) {
                 GoogleDriveManager.DriveTrack dt = currentDriveTracks.get(trackIndex);
                 String[] options = {
-                        "⭐ Add Folder to Favorites",
-                        "📚 Add Folder to Book Shelf",
-                        "⭐ Add Track to Favorites",
-                        "🎵 Add Track to Playlist"
+                        " Add Folder to Favorites",
+                        " Add Folder to Book Shelf",
+                        " Add Track to Favorites",
+                        " Add Track to Playlist"
                 };
                 new AlertDialog.Builder(this)
                         .setTitle("Google Drive: " + dt.title)
                         .setItems(options, (dialog, which) -> {
                             if (which == 0) {
                                 addToLibrary("favorites", currentDriveFolderUrl);
-                                libPrefs.edit().putString("title_" + currentDriveFolderUrl, "📁 " + currentDriveFolderName).apply();
+                                libPrefs.edit().putString("title_" + currentDriveFolderUrl, " " + currentDriveFolderName).apply();
                                 announceAccessibility("Folder added to favorites");
                                 Toast.makeText(this, "Folder added to Favorites", Toast.LENGTH_SHORT).show();
                             } else if (which == 1) {
@@ -5468,7 +5728,7 @@ public class MainActivity extends AppCompatActivity {
             if (existing.isEmpty()) libPrefs.edit().putString(key, folderPath).apply();
             else libPrefs.edit().putString(key, existing + "|" + folderPath).apply();
             File f = new File(folderPath);
-            String prefix = f.isDirectory() ? "📁 " : (ZipMediaManager.isZipFile(f.getName()) ? "📦 " : "🎵 ");
+            String prefix = f.isDirectory() ? " " : (ZipMediaManager.isZipFile(f.getName()) ? " " : " ");
             libPrefs.edit().putString("title_" + folderPath, prefix + f.getName()).apply();
             announceAccessibility("Added to shelf " + shelfName);
             Toast.makeText(this, "Added to " + shelfName, Toast.LENGTH_SHORT).show();
@@ -5541,7 +5801,7 @@ public class MainActivity extends AppCompatActivity {
             if (existing.isEmpty()) libPrefs.edit().putString(key, filePath).apply();
             else libPrefs.edit().putString(key, existing + "|" + filePath).apply();
             File f = new File(filePath);
-            String prefix = f.isDirectory() ? "📁 " : (ZipMediaManager.isZipFile(f.getName()) ? "📦 " : "🎵 ");
+            String prefix = f.isDirectory() ? " " : (ZipMediaManager.isZipFile(f.getName()) ? " " : " ");
             libPrefs.edit().putString("title_" + filePath, prefix + f.getName()).apply();
             announceAccessibility("Added to playlist " + playlistName);
             Toast.makeText(this, "Added to " + playlistName, Toast.LENGTH_SHORT).show();
@@ -5613,19 +5873,19 @@ public class MainActivity extends AppCompatActivity {
                         libraryDisplayNames.add(customTitle);
                     } else if (GoogleDriveManager.isGoogleDriveUrl(path)) {
                         String id = GoogleDriveManager.extractDriveId(path);
-                        libraryDisplayNames.add("☁️ Google Drive (" + (id != null ? id : "Folder") + ")");
+                        libraryDisplayNames.add(" Google Drive (" + (id != null ? id : "Folder") + ")");
                     } else if (ZipMediaManager.isZipFile(path) || path.toLowerCase(Locale.ROOT).endsWith(".zip") || libPrefs.contains("zip_cache_" + path) || libPrefs.contains("zip_name_" + path)) {
                         String zName = libPrefs.getString("zip_name_" + path, "");
                         if (zName.isEmpty()) {
                             File f = new File(path);
                             zName = f.getName();
                         }
-                        libraryDisplayNames.add("📦 " + zName);
+                        libraryDisplayNames.add(" " + zName);
                     } else if ("history_playlists".equals(key) || (libraryMode == 0 && historyFilterMode == 2)) {
-                        libraryDisplayNames.add("🎶 " + path);
+                        libraryDisplayNames.add(" " + path);
                     } else {
                         File f = new File(path);
-                        String iconPrefix = f.isDirectory() ? "📁 " : (ZipMediaManager.isAudioFile(f.getName()) ? "🎵 " : "");
+                        String iconPrefix = f.isDirectory() ? " " : (ZipMediaManager.isAudioFile(f.getName()) ? " " : "");
                         libraryDisplayNames.add(iconPrefix + f.getName() + (f.isDirectory() ? " (Folder)" : ""));
                     }
                 }
@@ -5852,7 +6112,7 @@ public class MainActivity extends AppCompatActivity {
                                 "1. Tap 'Open Settings' below.\n" +
                                 "2. Open 'Open by default' and use 'Add link' to add drive.google.com.\n\n" +
                                 "Alternatively, open your Google Drive app info -> 'Open by default' and turn off 'Open supported links'.\n\n" +
-                                "💡 Tip: You can also tap 'Share' on any WhatsApp link or audio and select 'KTS Advanced Media Player' to play immediately!")
+                                " Tip: You can also tap 'Share' on any WhatsApp link or audio and select 'KTS Advanced Media Player' to play immediately!")
                         .setPositiveButton("Open Settings", (d, w) -> {
                             try {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -6865,57 +7125,50 @@ public class MainActivity extends AppCompatActivity {
                 public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
                     super.onInitializeAccessibilityNodeInfo(host, info);
                     info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            AccessibilityNodeInfoCompat.ACTION_CLICK, "Open track options"));
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                             R.id.action_resume_last, "Resume last played track"));
-                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
-                            R.id.action_open_bookshelf, "Open book shelf"));
-                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
-                            R.id.action_open_favorites, "Open favorites"));
-                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
-                            R.id.action_open_history, "Open history"));
                     info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                             R.id.action_now_details, "Show track time and playback details"));
                     if (!currentPlayingFile.isEmpty()) {
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_share, "Share current track"));
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_ringtone, "Set current track as ringtone"));
                         info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                                 R.id.action_now_fav, "Add current track to favorites"));
                         info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                                 R.id.action_now_bookshelf, "Add current track to book shelf"));
                         info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                                 R.id.action_now_playlist, "Add current track to playlist"));
-                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
-                                R.id.action_now_share, "Share current track"));
                     }
                 }
 
                 @Override
                 public boolean performAccessibilityAction(@NonNull View host, int action, Bundle args) {
-                    if (action == R.id.action_resume_last) {
+                    if (action == AccessibilityNodeInfoCompat.ACTION_CLICK) {
+                        showNowPlayingOptionsDialog();
+                        return true;
+                    } else if (action == R.id.action_resume_last) {
                         resumeGlobalLastPlayed();
-                        return true;
-                    } else if (action == R.id.action_open_bookshelf) {
-                        switchTab(2);
-                        libraryMode = 4;
-                        loadBookShelfList();
-                        announceAccessibility("Showing Book Shelves");
-                        return true;
-                    } else if (action == R.id.action_open_favorites) {
-                        switchTab(2);
-                        libraryMode = 1;
-                        loadLibraryData("favorites");
-                        announceAccessibility("Showing Favorites");
-                        return true;
-                    } else if (action == R.id.action_open_history) {
-                        switchTab(2);
-                        libraryMode = 0;
-                        historyFilterMode = 0;
-                        loadHistoryData();
-                        announceAccessibility("Showing History Tracks");
                         return true;
                     } else if (action == R.id.action_now_details) {
                         showTimeDetails();
                         return true;
+                    } else if (action == R.id.action_now_share) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            File f = new File(currentPlayingFile);
+                            if (f.exists()) shareFileDirectly(f);
+                        }
+                        return true;
+                    } else if (action == R.id.action_now_ringtone) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            setTrackAsRingtone(currentPlayingFile);
+                        }
+                        return true;
                     } else if (action == R.id.action_now_fav) {
                         if (!currentPlayingFile.isEmpty()) {
-                            libPrefs.edit().putString("title_" + currentPlayingFile, "🎵 " + new File(currentPlayingFile).getName()).apply();
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
                             addToLibrary("favorites", currentPlayingFile);
                             announceAccessibility("Track added to favorites");
                             Toast.makeText(MainActivity.this, "Track added to Favorites", Toast.LENGTH_SHORT).show();
@@ -6923,20 +7176,14 @@ public class MainActivity extends AppCompatActivity {
                         return true;
                     } else if (action == R.id.action_now_bookshelf) {
                         if (!currentPlayingFile.isEmpty()) {
-                            libPrefs.edit().putString("title_" + currentPlayingFile, "🎵 " + new File(currentPlayingFile).getName()).apply();
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
                             showBookShelfSelectionDialog(currentPlayingFile);
                         }
                         return true;
                     } else if (action == R.id.action_now_playlist) {
                         if (!currentPlayingFile.isEmpty()) {
-                            libPrefs.edit().putString("title_" + currentPlayingFile, "🎵 " + new File(currentPlayingFile).getName()).apply();
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
                             showPlaylistSelectionDialog(currentPlayingFile);
-                        }
-                        return true;
-                    } else if (action == R.id.action_now_share) {
-                        if (!currentPlayingFile.isEmpty()) {
-                            File f = new File(currentPlayingFile);
-                            if (f.exists()) shareFileDirectly(f);
                         }
                         return true;
                     }
@@ -6945,6 +7192,78 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        if (cardNowPlaying != null) {
+            ViewCompat.setAccessibilityDelegate(cardNowPlaying, new AccessibilityDelegateCompat() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            AccessibilityNodeInfoCompat.ACTION_CLICK, "Open track options"));
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            R.id.action_resume_last, "Resume last played track"));
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            R.id.action_now_details, "Show track time and playback details"));
+                    if (!currentPlayingFile.isEmpty()) {
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_share, "Share current track"));
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_ringtone, "Set current track as ringtone"));
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_fav, "Add current track to favorites"));
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_playlist, "Add current track to playlist"));
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_now_bookshelf, "Add current track to book shelf"));
+                    }
+                }
+
+                @Override
+                public boolean performAccessibilityAction(@NonNull View host, int action, Bundle args) {
+                    if (action == AccessibilityNodeInfoCompat.ACTION_CLICK) {
+                        showNowPlayingOptionsDialog();
+                        return true;
+                    } else if (action == R.id.action_resume_last) {
+                        resumeGlobalLastPlayed();
+                        return true;
+                    } else if (action == R.id.action_now_details) {
+                        showTimeDetails();
+                        return true;
+                    } else if (action == R.id.action_now_share) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            File f = new File(currentPlayingFile);
+                            if (f.exists()) shareFileDirectly(f);
+                        }
+                        return true;
+                    } else if (action == R.id.action_now_ringtone) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            setTrackAsRingtone(currentPlayingFile);
+                        }
+                        return true;
+                    } else if (action == R.id.action_now_fav) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
+                            addToLibrary("favorites", currentPlayingFile);
+                            announceAccessibility("Track added to favorites");
+                            Toast.makeText(MainActivity.this, "Track added to Favorites", Toast.LENGTH_SHORT).show();
+                        }
+                        return true;
+                    } else if (action == R.id.action_now_bookshelf) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
+                            showBookShelfSelectionDialog(currentPlayingFile);
+                        }
+                        return true;
+                    } else if (action == R.id.action_now_playlist) {
+                        if (!currentPlayingFile.isEmpty()) {
+                            libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
+                            showPlaylistSelectionDialog(currentPlayingFile);
+                        }
+                        return true;
+                    }
+                    return super.performAccessibilityAction(host, action, args);
+                }
+            });
+        }
         // 17. Root Layout Shortcuts for Accessibility (TalkBack custom actions)
         View rootLayout = findViewById(R.id.rootLayout);
         if (rootLayout != null) {
@@ -7041,7 +7360,7 @@ public class MainActivity extends AppCompatActivity {
         if (mediaPlayer != null) {
             mediaPlayer.setPlaybackParameters(new PlaybackParameters(currentSpeed, 1.0f));
         }
-        btnSpeed.setText(String.format("%.1fx ⚡", currentSpeed));
+        btnSpeed.setText(String.format("%.1fx ", currentSpeed));
         btnSpeed.setContentDescription(String.format("Speed %.1fx", currentSpeed));
         announceAccessibility("Speed " + String.format("%.1fx", currentSpeed));
         Toast.makeText(this, "Speed: " + String.format("%.1fx", currentSpeed), Toast.LENGTH_SHORT).show();
@@ -7218,34 +7537,34 @@ public class MainActivity extends AppCompatActivity {
         String curTimeStr = formatTime(currentPos);
 
         if (canAdd) {
-            displayItems.add("➕ Save Bookmark at " + curTimeStr);
+            displayItems.add(" Save Bookmark at " + curTimeStr);
             actionItems.add(() -> promptSaveBookmark());
 
-            displayItems.add("⚡ Quick Save at " + curTimeStr);
+            displayItems.add(" Quick Save at " + curTimeStr);
             actionItems.add(() -> quickSaveBookmarkAtCurrentPosition());
         }
 
         if (!bookmarks.isEmpty()) {
             for (MediaBookmarkItem bm : bookmarks) {
-                String label = "🔖 " + bm.trackName + " • " + bm.bookmarkTitle + " (" + formatTime((int) bm.positionMs) + ")";
+                String label = " " + bm.trackName + " , " + bm.bookmarkTitle + " (" + formatTime((int) bm.positionMs) + ")";
                 displayItems.add(label);
                 actionItems.add(() -> jumpToBookmark(bm));
             }
 
-            displayItems.add("🗑️ Delete a Bookmark (Select / Tick)...");
+            displayItems.add(" Delete a Bookmark (Select / Tick)...");
             actionItems.add(() -> showDeleteBookmarkDialog(finalScopePath, finalIsZip, bookmarks));
 
-            displayItems.add("🧹 Clear All Bookmarks in this " + (finalIsZip ? "ZIP" : "Folder"));
+            displayItems.add(" Clear All Bookmarks in this " + (finalIsZip ? "ZIP" : "Folder"));
             actionItems.add(() -> confirmClearAllBookmarks(finalScopePath, finalIsZip, finalScopeTitle));
         } else {
             if (!canAdd) {
-                displayItems.add("ℹ️ No bookmarks in " + (finalIsZip ? "ZIP: " : "Folder: ") + finalScopeTitle);
+                displayItems.add(" No bookmarks in " + (finalIsZip ? "ZIP: " : "Folder: ") + finalScopeTitle);
                 actionItems.add(null);
             }
         }
 
         AlertDialog bookmarkDialog = new AlertDialog.Builder(this)
-                .setTitle("📑 Bookmarks: " + finalScopeTitle)
+                .setTitle(" Bookmarks: " + finalScopeTitle)
                 .setItems(displayItems.toArray(new String[0]), (d, which) -> {
                     if (which >= 0 && which < actionItems.size()) {
                         Runnable r = actionItems.get(which);
@@ -7265,7 +7584,7 @@ public class MainActivity extends AppCompatActivity {
                     if (position >= startBmIdx && position < startBmIdx + bookmarks.size()) {
                         MediaBookmarkItem bmToDelete = bookmarks.get(position - startBmIdx);
                         new AlertDialog.Builder(MainActivity.this)
-                                .setTitle("🗑️ Delete Bookmark?")
+                                .setTitle(" Delete Bookmark?")
                                 .setMessage("Delete bookmark \"" + bmToDelete.bookmarkTitle + "\" (" + formatTime((int) bmToDelete.positionMs) + ") in " + bmToDelete.trackName + "?")
                                 .setPositiveButton("Delete", (d, w) -> {
                                     deleteBookmark(bmToDelete);
@@ -7408,11 +7727,11 @@ public class MainActivity extends AppCompatActivity {
 
         for (int i = 0; i < bookmarks.size(); i++) {
             MediaBookmarkItem b = bookmarks.get(i);
-            titles[i] = "🔖 " + b.trackName + " • " + b.bookmarkTitle + " (" + formatTime((int) b.positionMs) + ")";
+            titles[i] = " " + b.trackName + " , " + b.bookmarkTitle + " (" + formatTime((int) b.positionMs) + ")";
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle("🗑️ Delete Bookmarks (Tick to select)")
+                .setTitle(" Delete Bookmarks (Tick to select)")
                 .setMultiChoiceItems(titles, checkedItems, (dialogInterface, which, isChecked) -> {
                     checkedItems[which] = isChecked;
                     AlertDialog ad = (AlertDialog) dialogInterface;
@@ -7784,10 +8103,10 @@ public class MainActivity extends AppCompatActivity {
         tabPlayer.setOnClickListener(v -> switchTab(1));
         tabLibrary.setOnClickListener(v -> {
             switchTab(2);
-            libraryMode = 0;
+            libraryMode = 4;
             updateLibraryTabColors();
-            loadLibraryData("history");
-            announceAccessibility("Showing History");
+            loadBookShelfList();
+            announceAccessibility("Showing Book Shelves");
         });
         tabSettings.setOnClickListener(v -> switchTab(3));
 
@@ -7847,7 +8166,7 @@ public class MainActivity extends AppCompatActivity {
                         resetAB();
                         updateMediaSessionState(PlaybackState.STATE_PLAYING);
                         String trackTitle = currentDriveTracks.get(trackIndex).title;
-                        tvNowPlaying.setText("🎵 [Drive: " + currentDriveFolderName + "] " + trackTitle);
+                        tvNowPlaying.setText(" [Drive: " + currentDriveFolderName + "] " + trackTitle);
                         announceAccessibility("Playing Track " + (trackIndex + 1) + " of " + currentDriveTracks.size() + ": " + trackTitle);
                     } else {
                         playDriveTracks(currentDriveFolderName, currentDriveFolderUrl, new ArrayList<>(currentDriveTracks), trackIndex);
@@ -8072,7 +8391,7 @@ public class MainActivity extends AppCompatActivity {
 
         File primary = Environment.getExternalStorageDirectory();
         if (primary != null && primary.exists()) {
-            list.add(new StorageInfo("📱 Internal Storage", primary.getAbsolutePath(), true));
+            list.add(new StorageInfo(" Internal Storage", primary.getAbsolutePath(), true));
             seenPaths.add(primary.getAbsolutePath());
         }
 
@@ -8094,7 +8413,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         if (dir != null && dir.exists() && !seenPaths.contains(dir.getAbsolutePath())) {
                             String desc = vol.getDescription(this);
-                            String icon = vol.isRemovable() ? "💾 " : "📁 ";
+                            String icon = vol.isRemovable() ? " " : " ";
                             list.add(new StorageInfo(icon + (desc != null ? desc : dir.getName()), dir.getAbsolutePath(), vol.isPrimary()));
                             seenPaths.add(dir.getAbsolutePath());
                         }
@@ -8114,7 +8433,7 @@ public class MainActivity extends AppCompatActivity {
                     if (idx > 0) {
                         String root = p.substring(0, idx);
                         if (!seenPaths.contains(root) && new File(root).exists()) {
-                            list.add(new StorageInfo("💾 SD Card (" + new File(root).getName() + ")", root, false));
+                            list.add(new StorageInfo(" SD Card (" + new File(root).getName() + ")", root, false));
                             seenPaths.add(root);
                         }
                     }
@@ -8134,7 +8453,7 @@ public class MainActivity extends AppCompatActivity {
                             if (sub.getName().equals("emulated") && emulated0.exists()) {
                                 // already covered
                             } else {
-                                list.add(new StorageInfo("💾 " + sub.getName(), abs, false));
+                                list.add(new StorageInfo(" " + sub.getName(), abs, false));
                                 seenPaths.add(abs);
                             }
                         }
@@ -8244,7 +8563,7 @@ public class MainActivity extends AppCompatActivity {
         if (!lastFileInFolder.isEmpty() && new File(lastFileInFolder).exists()) {
             String name = new File(lastFileInFolder).getName();
             btnResumeFolder.setVisibility(View.VISIBLE);
-            btnResumeFolder.setText("▶ Resume: " + name + " (" + formatTime(lastPosInFolder) + ")");
+            btnResumeFolder.setText(" Resume: " + name + " (" + formatTime(lastPosInFolder) + ")");
             btnResumeFolder.setContentDescription("Resume " + name + " at " + formatTimeSpeech(lastPosInFolder));
             btnResumeFolder.setOnClickListener(v -> playExplorerAudioFile(lastFileInFolder));
         } else {
@@ -8263,7 +8582,7 @@ public class MainActivity extends AppCompatActivity {
         if (!lastFileInZip.isEmpty() && new File(lastFileInZip).exists()) {
             String name = new File(lastFileInZip).getName();
             btnResumeFolder.setVisibility(View.VISIBLE);
-            btnResumeFolder.setText("▶ Resume ZIP: " + name + " (" + formatTime(lastPosInZip) + ")");
+            btnResumeFolder.setText(" Resume ZIP: " + name + " (" + formatTime(lastPosInZip) + ")");
             btnResumeFolder.setContentDescription("Resume ZIP archive " + currentZipName + ", track " + name + " at " + formatTimeSpeech(lastPosInZip));
             btnResumeFolder.setOnClickListener(v -> playExplorerAudioFile(lastFileInZip));
         } else {
@@ -8372,7 +8691,7 @@ public class MainActivity extends AppCompatActivity {
         fileList.sort(fileComparator);
 
         for (File f : pinnedFolders) {
-            currentDisplayNames.add("📌 " + f.getName());
+            currentDisplayNames.add(" " + f.getName());
             currentDisplayPaths.add(f.getAbsolutePath());
         }
         for (File f : regularFolders) {
@@ -8380,7 +8699,7 @@ public class MainActivity extends AppCompatActivity {
             currentDisplayPaths.add(f.getAbsolutePath());
         }
         for (File f : zipList) {
-            currentDisplayNames.add("📦 " + f.getName());
+            currentDisplayNames.add(" " + f.getName());
             currentDisplayPaths.add(f.getAbsolutePath());
         }
         for (File f : fileList) {
@@ -8553,7 +8872,7 @@ public class MainActivity extends AppCompatActivity {
         discoveredZipPaths.sort(pathComparator);
 
         for (String fName : pinnedFolders) {
-            currentDisplayNames.add("📌 " + fName);
+            currentDisplayNames.add(" " + fName);
             currentDisplayPaths.add(folderPathMap.get(fName));
         }
         for (String fName : regularFolders) {
@@ -8561,7 +8880,7 @@ public class MainActivity extends AppCompatActivity {
             currentDisplayPaths.add(folderPathMap.get(fName));
         }
         for (String zPath : discoveredZipPaths) {
-            currentDisplayNames.add("📦 " + new File(zPath).getName());
+            currentDisplayNames.add(" " + new File(zPath).getName());
             currentDisplayPaths.add(zPath);
         }
         for (String aPath : discoveredAudioPaths) {
@@ -8712,13 +9031,13 @@ public class MainActivity extends AppCompatActivity {
                         displayName = streamInfo.originalUrl;
                     }
 
-                    tvNowPlaying.setText("📻 " + displayName);
+                    tvNowPlaying.setText(" " + displayName);
                     btnPlay.setText("Pause");
 
                     // Save stream to history
-                    libPrefs.edit().putString("title_" + streamInfo.originalUrl, "📻 " + displayName).apply();
+                    libPrefs.edit().putString("title_" + streamInfo.originalUrl, " " + displayName).apply();
                     if (!streamInfo.originalUrl.equals(streamInfo.streamUrl)) {
-                        libPrefs.edit().putString("title_" + streamInfo.streamUrl, "📻 " + displayName).apply();
+                        libPrefs.edit().putString("title_" + streamInfo.streamUrl, " " + displayName).apply();
                     }
                     addToLibrary("history", streamInfo.originalUrl);
                     addToLibrary("history_tracks", streamInfo.originalUrl);
@@ -8777,14 +9096,14 @@ public class MainActivity extends AppCompatActivity {
                 resolvedPaths.add(path);
 
                 String title = f.getName();
-                libPrefs.edit().putString("title_" + path, "🎵 " + title).apply();
+                libPrefs.edit().putString("title_" + path, " " + title).apply();
                 addToLibrary("history", path);
                 addToLibrary("history_tracks", path);
 
                 File parent = f.getParentFile();
                 if (parent != null) {
                     addToLibrary("history_folders", parent.getAbsolutePath());
-                    libPrefs.edit().putString("title_" + parent.getAbsolutePath(), "📁 " + parent.getName()).apply();
+                    libPrefs.edit().putString("title_" + parent.getAbsolutePath(), " " + parent.getName()).apply();
                 }
             }
         }
@@ -9058,7 +9377,7 @@ public class MainActivity extends AppCompatActivity {
         String savedZipName = libPrefs.getString("zip_name_" + path, "");
         if (savedZipName.isEmpty()) {
             String customTitle = libPrefs.getString("title_" + path, "");
-            if (customTitle.startsWith("📦 ")) {
+            if (customTitle.startsWith("\uD83D\uDCE6 ")) {
                 savedZipName = customTitle.substring(2).trim();
             } else {
                 savedZipName = new File(path).getName();
@@ -9093,7 +9412,7 @@ public class MainActivity extends AppCompatActivity {
                 libPrefs.edit()
                         .putString("zip_cache_" + path, foundCacheDir.getAbsolutePath())
                         .putString("zip_name_" + path, savedZipName)
-                        .putString("title_" + path, "📦 " + savedZipName)
+                        .putString("title_" + path, " " + savedZipName)
                         .apply();
                 switchTab(1);
                 playZipTracks(savedZipName, path, tracks, 0);
@@ -9134,17 +9453,17 @@ public class MainActivity extends AppCompatActivity {
 
         List<String> optionsList = new ArrayList<>();
         if (!lastFileInZip.isEmpty() && new File(lastFileInZip).exists()) {
-            optionsList.add("▶ Resume: " + new File(lastFileInZip).getName() + " (" + formatTime(lastPosInZip) + ")");
+            optionsList.add(" Resume: " + new File(lastFileInZip).getName() + " (" + formatTime(lastPosInZip) + ")");
         }
         optionsList.add("Play All Tracks");
         optionsList.add("Browse Tracks inside ZIP");
 
         String[] options = optionsList.toArray(new String[0]);
         new AlertDialog.Builder(this)
-                .setTitle("📦 " + zipFile.getName())
+                .setTitle(" " + zipFile.getName())
                 .setItems(options, (dialog, which) -> {
                     String selected = options[which];
-                    if (selected.startsWith("▶ Resume")) {
+                    if (selected.startsWith(" Resume")) {
                         resumeZipPlayback(zipFile);
                     } else if ("Play All Tracks".equals(selected)) {
                         playZipFile(zipFile, 0);
@@ -9332,7 +9651,7 @@ public class MainActivity extends AppCompatActivity {
                     libPrefs.edit()
                             .putString("zip_cache_" + zipPath, cDir.getAbsolutePath())
                             .putString("zip_name_" + zipPath, zipName)
-                            .putString("title_" + zipPath, "📦 " + zipName)
+                            .putString("title_" + zipPath, " " + zipName)
                             .apply();
                 }
             }
@@ -9382,7 +9701,7 @@ public class MainActivity extends AppCompatActivity {
             updateExoPlayerPlayMode();
 
             String trackName = tracks.get(finalIndex).getName();
-            tvNowPlaying.setText("🎵 [" + zipName + "] " + trackName);
+            tvNowPlaying.setText(" [" + zipName + "] " + trackName);
             announceAccessibility("Playing ZIP: " + zipName + ". Track " + (finalIndex + 1) + " of " + tracks.size() + ": " + trackName);
 
         } catch (Exception e) {
@@ -9408,7 +9727,7 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(tvMsg);
 
         return new AlertDialog.Builder(this)
-                .setTitle("📦 " + title)
+                .setTitle(" " + title)
                 .setView(layout)
                 .setCancelable(false)
                 .create();
@@ -9454,7 +9773,7 @@ public class MainActivity extends AppCompatActivity {
                 hadManageStorageAccess = true;
             } else {
                 new AlertDialog.Builder(this)
-                        .setTitle("📁 Storage Permission")
+                        .setTitle(" Storage Permission")
                         .setMessage("To view all folders and play audio files smoothly, please grant 'All files access' permission.")
                         .setPositiveButton("Grant", (dialog, which) -> {
                             try {
@@ -9555,16 +9874,16 @@ public class MainActivity extends AppCompatActivity {
         List<String> options = new ArrayList<>();
 
         if (isSleepTimerActive || isSleepEndOfTrack || isSleepTimerPersistent) {
-            options.add("❌ Turn Off Sleep Timer");
+            options.add(" Turn Off Sleep Timer");
             if (isSleepTimerActive && !isSleepEndOfTrack) {
-                options.add("➕ Add 5 Minutes");
+                options.add(" Add 5 Minutes");
             }
             if (isSleepTimerPersistent) {
-                options.add("⏱️ Switch to One-Time / Manual Mode");
+                options.add(" Switch to One-Time / Manual Mode");
             } else {
-                options.add("🔄 Switch to Persistent (Permanent) Mode");
+                options.add(" Switch to Persistent (Permanent) Mode");
             }
-            options.add("⚙️ Set Different Time / Preset...");
+            options.add(" Set Different Time / Preset...");
         } else {
             showSleepTimerPresetsDialog();
             return;
@@ -9574,25 +9893,25 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle(statusText)
                 .setItems(options.toArray(new String[0]), (dialog, which) -> {
                     String selected = options.get(which);
-                    if (selected.equals("❌ Turn Off Sleep Timer")) {
+                    if (selected.equals(" Turn Off Sleep Timer")) {
                         turnOffSleepTimer();
-                    } else if (selected.equals("➕ Add 5 Minutes")) {
+                    } else if (selected.equals(" Add 5 Minutes")) {
                         extendSleepTimer(5 * 60 * 1000L);
                         Toast.makeText(this, "Added 5 minutes to Sleep Timer", Toast.LENGTH_SHORT).show();
                         announceAccessibility("Added 5 minutes to Sleep Timer");
-                    } else if (selected.equals("⏱️ Switch to One-Time / Manual Mode")) {
+                    } else if (selected.equals(" Switch to One-Time / Manual Mode")) {
                         isSleepTimerPersistent = false;
                         bkPrefs.edit().putBoolean("sleep_timer_persistent", false).apply();
                         updateSleepTimerUI();
                         Toast.makeText(this, "Switched to One-Time mode (will turn off after expiring)", Toast.LENGTH_SHORT).show();
                         announceAccessibility("Switched to One-Time mode");
-                    } else if (selected.equals("🔄 Switch to Persistent (Permanent) Mode")) {
+                    } else if (selected.equals(" Switch to Persistent (Permanent) Mode")) {
                         isSleepTimerPersistent = true;
                         bkPrefs.edit().putBoolean("sleep_timer_persistent", true).apply();
                         updateSleepTimerUI();
                         Toast.makeText(this, "Switched to Persistent mode (permanent until changed)", Toast.LENGTH_SHORT).show();
                         announceAccessibility("Switched to Persistent mode");
-                    } else if (selected.equals("⚙️ Set Different Time / Preset...")) {
+                    } else if (selected.equals(" Set Different Time / Preset...")) {
                         showSleepTimerPresetsDialog();
                     }
                 })
@@ -9602,12 +9921,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSleepTimerPresetsDialog() {
         String[] timerOptions = {
-                "🎵 End of Track",
-                "⏱️ 15 Minutes",
-                "⏱️ 30 Minutes",
-                "⏱️ 45 Minutes",
-                "⏱️ 1 Hour",
-                "⚙️ Custom Minutes..."
+                " End of Track",
+                " 15 Minutes",
+                " 30 Minutes",
+                " 45 Minutes",
+                " 1 Hour",
+                " Custom Minutes..."
         };
 
         new AlertDialog.Builder(this)
@@ -9633,8 +9952,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void promptSleepModeType(long durationMs, String label) {
         String[] modeChoices = {
-                "🔄 Persistent (Permanent until changed)",
-                "⏱️ One-Time (Manual - turns off after expiring)"
+                " Persistent (Permanent until changed)",
+                " One-Time (Manual - turns off after expiring)"
         };
 
         new AlertDialog.Builder(this)
@@ -10003,7 +10322,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("🎨 Choose App Skin / Theme")
+                .setTitle(" Choose App Skin / Theme")
                 .setSingleChoiceItems(displayNames, checkedItem, (dialog, which) -> {
                     ThemeManager.ThemeItem selected = themes.get(which);
                     ThemeManager.setCurrentTheme(this, selected.id);
@@ -10045,6 +10364,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Card Surfaces
+        if (cardFolderHeader != null) applyCardSurface(cardFolderHeader, theme.surfaceColor, theme.primaryColor);
         applyCardSurface(cardNowPlaying, theme.surfaceColor, theme.primaryColor);
         applyCardSurface(cardPlaybackControls, theme.surfaceColor, theme.buttonColor);
         applyCardSurface(layoutLibHeader, theme.surfaceColor, theme.primaryColor);
@@ -10094,7 +10414,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Settings Buttons
         if (btnAppTheme != null) {
-            btnAppTheme.setText("🎨 App Skin / Theme: " + theme.displayName);
+            btnAppTheme.setText(" App Skin / Theme: " + theme.displayName);
             btnAppTheme.setBackgroundColor(theme.buttonColor);
         }
 

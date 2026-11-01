@@ -126,7 +126,7 @@ public class AppUpdateManager {
         ProgressDialog progressDialog;
         if (isManualCheck) {
             progressDialog = new ProgressDialog(activity);
-            progressDialog.setTitle("🚀 GitHub In-App Update");
+            progressDialog.setTitle("GitHub In-App Update");
             progressDialog.setMessage("Checking for updates from GitHub...");
             progressDialog.setCancelable(false);
             progressDialog.show();
@@ -220,7 +220,7 @@ public class AppUpdateManager {
                     } else {
                         if (isManualCheck) {
                             new AlertDialog.Builder(activity)
-                                    .setTitle("✅ App Up To Date")
+                                    .setTitle("App Up To Date")
                                     .setMessage("You are using the latest version of KTS Advanced Media Player!\n\nCurrent Version: v" + currentVersion + "\nGitHub Version: " + tagName)
                                     .setPositiveButton("OK", null)
                                     .show();
@@ -246,19 +246,19 @@ public class AppUpdateManager {
     private void showUpdateAvailableDialog(Activity activity, ReleaseInfo info, String currentVersion) {
         StringBuilder msg = new StringBuilder();
         msg.append("New version available!\n\n");
-        msg.append("📱 Installed: v").append(currentVersion).append("\n");
-        msg.append("🚀 Latest: ").append(info.tagName).append("\n");
+        msg.append("Installed: v").append(currentVersion).append("\n");
+        msg.append("Latest: ").append(info.tagName).append("\n");
 
         if (info.apkSize > 0) {
-            msg.append("📦 Download Size: ").append(formatFileSize(info.apkSize)).append("\n");
+            msg.append("Download Size: ").append(formatFileSize(info.apkSize)).append("\n");
         }
 
-        msg.append("\n📝 Changelog:\n").append(info.body).append("\n");
+        msg.append("\nChangelog:\n").append(info.body).append("\n");
 
         AlertDialog.Builder builder = new AlertDialog.Builder(activity)
-                .setTitle("🚀 Update Available: " + info.tagName)
+                .setTitle("Update Available: " + info.tagName)
                 .setMessage(msg.toString())
-                .setPositiveButton("📥 Download & Install", (dialog, which) -> {
+                .setPositiveButton("Download & Install", (dialog, which) -> {
                     if (info.apkUrl != null && !info.apkUrl.isEmpty()) {
                         downloadAndInstallApk(activity, info.apkUrl, info.tagName);
                     } else {
@@ -278,7 +278,7 @@ public class AppUpdateManager {
         if (activity == null || activity.isFinishing()) return;
 
         ProgressDialog downloadDialog = new ProgressDialog(activity);
-        downloadDialog.setTitle("📥 Downloading Update");
+        downloadDialog.setTitle("Downloading Update");
         downloadDialog.setMessage("Downloading " + versionName + "...\nPlease wait...");
         downloadDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         downloadDialog.setMax(100);
@@ -362,7 +362,7 @@ public class AppUpdateManager {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!activity.getPackageManager().canRequestPackageInstalls()) {
                     new AlertDialog.Builder(activity)
-                            .setTitle("⚙️ Permission Required")
+                            .setTitle("Permission Required")
                             .setMessage("To install the update, please enable 'Allow from this source' for KTS Advanced Media Player in Settings.")
                             .setPositiveButton("Go to Settings", (dialog, which) -> {
                                 Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);

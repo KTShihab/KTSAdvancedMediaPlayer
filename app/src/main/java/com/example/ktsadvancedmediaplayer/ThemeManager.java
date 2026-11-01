@@ -42,7 +42,7 @@ public class ThemeManager {
         // 1. Royal Violet (Default)
         THEMES.add(new ThemeItem(
                 "royal_violet",
-                "💜 Royal Violet",
+                "Royal Violet",
                 0xFF7C4DFF, // Primary Violet Neon
                 0xFFB388FF, // Secondary Lavender
                 0xFF121019, // Deep Background
@@ -54,7 +54,7 @@ public class ThemeManager {
         // 2. Emerald Cyber
         THEMES.add(new ThemeItem(
                 "emerald_cyber",
-                "💚 Emerald Cyber",
+                "Emerald Cyber",
                 0xFF00E676, // Neon Mint
                 0xFF69F0AE, // Light Sage
                 0xFF0A130E, // Cyber Forest
@@ -66,7 +66,7 @@ public class ThemeManager {
         // 3. Oceanic Azure
         THEMES.add(new ThemeItem(
                 "oceanic_azure",
-                "💙 Oceanic Azure",
+                "Oceanic Azure",
                 0xFF00B0FF, // Electric Cyan
                 0xFF80D8FF, // Sky Blue
                 0xFF0A121D, // Abyss Navy
@@ -78,7 +78,7 @@ public class ThemeManager {
         // 4. Sunset Gold
         THEMES.add(new ThemeItem(
                 "sunset_gold",
-                "🧡 Sunset Gold",
+                "Sunset Gold",
                 0xFFFF9100, // Vibrant Amber
                 0xFFFFD54F, // Warm Gold
                 0xFF150E0A, // Dark Mocha
@@ -90,7 +90,7 @@ public class ThemeManager {
         // 5. Neon Synthwave
         THEMES.add(new ThemeItem(
                 "neon_synthwave",
-                "💖 Neon Synthwave",
+                "Neon Synthwave",
                 0xFFFF4081, // Hot Neon Pink
                 0xFFEA80FC, // Cyber Magenta
                 0xFF140A18, // Synth Dark
@@ -102,7 +102,7 @@ public class ThemeManager {
         // 6. AMOLED Pure Dark
         THEMES.add(new ThemeItem(
                 "amoled_dark",
-                "🖤 AMOLED Pure Dark",
+                "AMOLED Pure Dark",
                 0xFFFFFFFF, // Crisp White
                 0xFFBDBDBD, // Silver
                 0xFF000000, // Pure Black

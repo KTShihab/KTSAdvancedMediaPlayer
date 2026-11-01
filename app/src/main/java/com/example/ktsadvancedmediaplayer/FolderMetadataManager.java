@@ -43,7 +43,7 @@ public class FolderMetadataManager {
         public String getShortDescription() {
             String filesTxt = fileCount == 1 ? "1 track" : fileCount + " tracks";
             if (totalDurationMs > 0) {
-                return filesTxt + " • " + formatDurationShort(totalDurationMs);
+                return filesTxt + ", " + formatDurationShort(totalDurationMs);
             } else if (fileCount > 0) {
                 return filesTxt;
             }
@@ -75,7 +75,7 @@ public class FolderMetadataManager {
         public String getShortDescription() {
             String sizeStr = ZipMediaManager.formatFileSize(sizeBytes);
             if (durationMs > 0) {
-                return formatDurationShort(durationMs) + " • " + sizeStr;
+                return formatDurationShort(durationMs) + ", " + sizeStr;
             } else if (sizeBytes > 0) {
                 return sizeStr;
             }
