@@ -54,6 +54,7 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -129,6 +130,24 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout containerPlayer, containerLibrary, eqBandsContainer;
     private ScrollView containerSettings;
     private Button tabPlayer, tabLibrary, tabSettings;
+
+    // Settings Category Views & Constants
+    public static final int SETTINGS_FOLDER_NONE = -1;
+    public static final int SETTINGS_FOLDER_APPEARANCE = 0;
+    public static final int SETTINGS_FOLDER_PLAYBACK = 1;
+    public static final int SETTINGS_FOLDER_AUDIO_EFFECTS = 2;
+    public static final int SETTINGS_FOLDER_VOL_SHORTCUTS = 3;
+    public static final int SETTINGS_FOLDER_STORAGE = 4;
+    public static final int SETTINGS_FOLDER_SHORTCUTS = 5;
+    public static final int SETTINGS_FOLDER_UPDATES = 6;
+
+    private LinearLayout layoutSettingsCategoryFolders;
+    private LinearLayout secAppearance, secPlayback, secAudioEffects, secVolShortcuts, secStorage, secShortcuts, secUpdates;
+    private Button btnFolderAppearance, btnFolderPlayback, btnFolderAudioEffects, btnFolderVolShortcuts, btnFolderStorage, btnFolderShortcuts, btnFolderUpdates;
+    private Button btnSettingsBack, btnClearSearchSettings;
+    private TextView tvSettingsCategoryTitle, tvSettingsNoResults;
+    private EditText inputSearchSettings;
+    private int currentSettingsFolder = SETTINGS_FOLDER_NONE;
     private View rootLayout;
     private Button btnAppTheme;
     private TextView headerAppearance, headerPlayback, headerAudioEffects, headerVolShortcuts, headerStorage, headerShortcuts, headerUpdates, tvCurrentVersionInfo;
@@ -414,6 +433,7 @@ public class MainActivity extends AppCompatActivity {
         playMode = bkPrefs.getInt("persistent_play_mode", 0);
 
         initViews();
+        setupSettingsCategories();
         setupShortcutsUI();
         setupMediaSession();
         setupAudioEffectsUI();
@@ -1964,6 +1984,244 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }).start();
+    }
+
+    private void setupSettingsCategories() {
+        layoutSettingsCategoryFolders = findViewById(R.id.layoutSettingsCategoryFolders);
+        secAppearance = findViewById(R.id.secAppearance);
+        secPlayback = findViewById(R.id.secPlayback);
+        secAudioEffects = findViewById(R.id.secAudioEffects);
+        secVolShortcuts = findViewById(R.id.secVolShortcuts);
+        secStorage = findViewById(R.id.secStorage);
+        secShortcuts = findViewById(R.id.secShortcuts);
+        secUpdates = findViewById(R.id.secUpdates);
+
+        btnFolderAppearance = findViewById(R.id.btnFolderAppearance);
+        btnFolderPlayback = findViewById(R.id.btnFolderPlayback);
+        btnFolderAudioEffects = findViewById(R.id.btnFolderAudioEffects);
+        btnFolderVolShortcuts = findViewById(R.id.btnFolderVolShortcuts);
+        btnFolderStorage = findViewById(R.id.btnFolderStorage);
+        btnFolderShortcuts = findViewById(R.id.btnFolderShortcuts);
+        btnFolderUpdates = findViewById(R.id.btnFolderUpdates);
+
+        btnSettingsBack = findViewById(R.id.btnSettingsBack);
+        btnClearSearchSettings = findViewById(R.id.btnClearSearchSettings);
+        tvSettingsCategoryTitle = findViewById(R.id.tvSettingsCategoryTitle);
+        tvSettingsNoResults = findViewById(R.id.tvSettingsNoResults);
+        inputSearchSettings = findViewById(R.id.inputSearchSettings);
+
+        if (btnFolderAppearance != null) {
+            btnFolderAppearance.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_APPEARANCE));
+        }
+        if (btnFolderPlayback != null) {
+            btnFolderPlayback.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_PLAYBACK));
+        }
+        if (btnFolderAudioEffects != null) {
+            btnFolderAudioEffects.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_AUDIO_EFFECTS));
+        }
+        if (btnFolderVolShortcuts != null) {
+            btnFolderVolShortcuts.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_VOL_SHORTCUTS));
+        }
+        if (btnFolderStorage != null) {
+            btnFolderStorage.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_STORAGE));
+        }
+        if (btnFolderShortcuts != null) {
+            btnFolderShortcuts.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_SHORTCUTS));
+        }
+        if (btnFolderUpdates != null) {
+            btnFolderUpdates.setOnClickListener(v -> openSettingsFolder(SETTINGS_FOLDER_UPDATES));
+        }
+
+        if (btnSettingsBack != null) {
+            btnSettingsBack.setOnClickListener(v -> {
+                if (inputSearchSettings != null && inputSearchSettings.getText().length() > 0) {
+                    inputSearchSettings.setText("");
+                }
+                openSettingsFolder(SETTINGS_FOLDER_NONE);
+            });
+        }
+
+        if (btnClearSearchSettings != null) {
+            btnClearSearchSettings.setOnClickListener(v -> {
+                if (inputSearchSettings != null) {
+                    inputSearchSettings.setText("");
+                }
+            });
+        }
+
+        if (inputSearchSettings != null) {
+            inputSearchSettings.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    filterSettings(s != null ? s.toString() : "");
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        openSettingsFolder(SETTINGS_FOLDER_NONE);
+    }
+
+    private void openSettingsFolder(int folderIndex) {
+        currentSettingsFolder = folderIndex;
+        if (containerSettings != null) {
+            containerSettings.smoothScrollTo(0, 0);
+        }
+
+        if (inputSearchSettings != null && inputSearchSettings.getText().length() > 0) {
+            inputSearchSettings.setText("");
+        }
+        if (tvSettingsNoResults != null) tvSettingsNoResults.setVisibility(View.GONE);
+        if (btnClearSearchSettings != null) btnClearSearchSettings.setVisibility(View.GONE);
+
+        if (layoutSettingsCategoryFolders != null) {
+            layoutSettingsCategoryFolders.setVisibility(folderIndex == SETTINGS_FOLDER_NONE ? View.VISIBLE : View.GONE);
+        }
+
+        if (secAppearance != null) secAppearance.setVisibility(View.GONE);
+        if (secPlayback != null) secPlayback.setVisibility(View.GONE);
+        if (secAudioEffects != null) secAudioEffects.setVisibility(View.GONE);
+        if (secVolShortcuts != null) secVolShortcuts.setVisibility(View.GONE);
+        if (secStorage != null) secStorage.setVisibility(View.GONE);
+        if (secShortcuts != null) secShortcuts.setVisibility(View.GONE);
+        if (secUpdates != null) secUpdates.setVisibility(View.GONE);
+
+        restoreAllSettingsChildrenVisibility();
+
+        if (folderIndex == SETTINGS_FOLDER_NONE) {
+            if (btnSettingsBack != null) btnSettingsBack.setVisibility(View.GONE);
+            if (tvSettingsCategoryTitle != null) tvSettingsCategoryTitle.setText("Settings Folders");
+            announceAccessibility("Settings Folders");
+            return;
+        }
+
+        if (btnSettingsBack != null) btnSettingsBack.setVisibility(View.VISIBLE);
+
+        String title = "Settings";
+        switch (folderIndex) {
+            case SETTINGS_FOLDER_APPEARANCE:
+                if (secAppearance != null) secAppearance.setVisibility(View.VISIBLE);
+                title = "Appearance & Themes";
+                break;
+            case SETTINGS_FOLDER_PLAYBACK:
+                if (secPlayback != null) secPlayback.setVisibility(View.VISIBLE);
+                title = "Playback & Navigation";
+                break;
+            case SETTINGS_FOLDER_AUDIO_EFFECTS:
+                if (secAudioEffects != null) secAudioEffects.setVisibility(View.VISIBLE);
+                title = "Audio Effects & Equalizer";
+                break;
+            case SETTINGS_FOLDER_VOL_SHORTCUTS:
+                if (secVolShortcuts != null) secVolShortcuts.setVisibility(View.VISIBLE);
+                title = "Volume Key Shortcuts";
+                break;
+            case SETTINGS_FOLDER_STORAGE:
+                if (secStorage != null) secStorage.setVisibility(View.VISIBLE);
+                title = "Storage & Cache Management";
+                break;
+            case SETTINGS_FOLDER_SHORTCUTS:
+                if (secShortcuts != null) secShortcuts.setVisibility(View.VISIBLE);
+                title = "Shortcuts & Integrations";
+                break;
+            case SETTINGS_FOLDER_UPDATES:
+                if (secUpdates != null) secUpdates.setVisibility(View.VISIBLE);
+                title = "App Updates";
+                break;
+        }
+
+        if (tvSettingsCategoryTitle != null) tvSettingsCategoryTitle.setText(title);
+        announceAccessibility("Opened " + title + " settings");
+    }
+
+    private void restoreAllSettingsChildrenVisibility() {
+        LinearLayout[] sections = {secAppearance, secPlayback, secAudioEffects, secVolShortcuts, secStorage, secShortcuts, secUpdates};
+        for (LinearLayout sec : sections) {
+            if (sec != null) {
+                for (int i = 0; i < sec.getChildCount(); i++) {
+                    sec.getChildAt(i).setVisibility(View.VISIBLE);
+                }
+            }
+        }
+    }
+
+    private void filterSettings(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            if (btnClearSearchSettings != null) btnClearSearchSettings.setVisibility(View.GONE);
+            if (tvSettingsNoResults != null) tvSettingsNoResults.setVisibility(View.GONE);
+            openSettingsFolder(currentSettingsFolder);
+            return;
+        }
+
+        if (btnClearSearchSettings != null) btnClearSearchSettings.setVisibility(View.VISIBLE);
+        String lowerQuery = query.trim().toLowerCase();
+
+        if (layoutSettingsCategoryFolders != null) layoutSettingsCategoryFolders.setVisibility(View.GONE);
+        if (btnSettingsBack != null) btnSettingsBack.setVisibility(View.VISIBLE);
+        if (tvSettingsCategoryTitle != null) tvSettingsCategoryTitle.setText("Search: " + query.trim());
+
+        LinearLayout[] sections = {secAppearance, secPlayback, secAudioEffects, secVolShortcuts, secStorage, secShortcuts, secUpdates};
+        int totalMatches = 0;
+
+        for (LinearLayout sec : sections) {
+            if (sec == null) continue;
+
+            boolean headerMatches = false;
+            if (sec.getChildCount() > 0) {
+                View firstChild = sec.getChildAt(0);
+                if (firstChild instanceof TextView) {
+                    CharSequence hText = ((TextView) firstChild).getText();
+                    if (hText != null && hText.toString().toLowerCase().contains(lowerQuery)) {
+                        headerMatches = true;
+                    }
+                }
+            }
+
+            int matchingItems = 0;
+            for (int i = 0; i < sec.getChildCount(); i++) {
+                View child = sec.getChildAt(i);
+                if (headerMatches) {
+                    child.setVisibility(View.VISIBLE);
+                    matchingItems++;
+                } else {
+                    boolean childMatches = false;
+                    if (child instanceof TextView) {
+                        CharSequence text = ((TextView) child).getText();
+                        if (text != null && text.toString().toLowerCase().contains(lowerQuery)) {
+                            childMatches = true;
+                        }
+                        CharSequence desc = child.getContentDescription();
+                        if (desc != null && desc.toString().toLowerCase().contains(lowerQuery)) {
+                            childMatches = true;
+                        }
+                    }
+                    if (childMatches) {
+                        child.setVisibility(View.VISIBLE);
+                        matchingItems++;
+                    } else if (i != 0) {
+                        child.setVisibility(View.GONE);
+                    }
+                }
+            }
+
+            if (matchingItems > 0) {
+                if (sec.getChildCount() > 0) {
+                    sec.getChildAt(0).setVisibility(View.VISIBLE);
+                }
+                sec.setVisibility(View.VISIBLE);
+                totalMatches += matchingItems;
+            } else {
+                sec.setVisibility(View.GONE);
+            }
+        }
+
+        if (tvSettingsNoResults != null) {
+            tvSettingsNoResults.setVisibility(totalMatches == 0 ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void setupUniversalSearch() {
@@ -8108,7 +8366,10 @@ public class MainActivity extends AppCompatActivity {
             loadBookShelfList();
             announceAccessibility("Showing Book Shelves");
         });
-        tabSettings.setOnClickListener(v -> switchTab(3));
+        tabSettings.setOnClickListener(v -> {
+            switchTab(3);
+            openSettingsFolder(SETTINGS_FOLDER_NONE);
+        });
 
         listViewFiles.setOnItemClickListener((parent, view, position, id) -> {
             String path = currentDisplayPaths.get(position);
@@ -10150,8 +10411,16 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // 1. If in Settings tab, exit Settings and go back to Player tab
+                // 1. If in Settings tab
                 if (containerSettings.getVisibility() == View.VISIBLE) {
+                    if (inputSearchSettings != null && inputSearchSettings.getText().length() > 0) {
+                        inputSearchSettings.setText("");
+                        return;
+                    }
+                    if (currentSettingsFolder != SETTINGS_FOLDER_NONE) {
+                        openSettingsFolder(SETTINGS_FOLDER_NONE);
+                        return;
+                    }
                     switchTab(1);
                     return;
                 }
@@ -10420,6 +10689,17 @@ public class MainActivity extends AppCompatActivity {
 
         if (headerUpdates != null) headerUpdates.setTextColor(theme.headerColor);
         if (btnCheckUpdate != null) btnCheckUpdate.setBackgroundColor(theme.primaryColor);
+
+        // Settings Category Folders & Navigation
+        if (btnSettingsBack != null) btnSettingsBack.setBackgroundColor(theme.buttonColor);
+        if (btnClearSearchSettings != null) btnClearSearchSettings.setBackgroundColor(theme.buttonColor);
+        if (btnFolderAppearance != null) btnFolderAppearance.setBackgroundColor(theme.surfaceColor);
+        if (btnFolderPlayback != null) btnFolderPlayback.setBackgroundColor(theme.surfaceColor);
+        if (btnFolderAudioEffects != null) btnFolderAudioEffects.setBackgroundColor(theme.surfaceColor);
+        if (btnFolderVolShortcuts != null) btnFolderVolShortcuts.setBackgroundColor(theme.surfaceColor);
+        if (btnFolderStorage != null) btnFolderStorage.setBackgroundColor(theme.surfaceColor);
+        if (btnFolderShortcuts != null) btnFolderShortcuts.setBackgroundColor(theme.surfaceColor);
+        if (btnFolderUpdates != null) btnFolderUpdates.setBackgroundColor(theme.surfaceColor);
 
         updateResumeToggleUI();
         updateBgPlaybackToggleUI();
