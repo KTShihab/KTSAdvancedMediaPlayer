@@ -5,8 +5,11 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.KeyguardManager;
 import android.app.PendingIntent;
+import android.app.TimePickerDialog;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -55,6 +58,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -104,6 +108,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -200,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvLibTitle, tvLibEmpty;
 
     private Button btnVolUpLong, btnVolUpDouble, btnVolDownLong, btnVolDownDouble;
-    private Button btnVolShortcutsMasterToggle, btnScreenOffVolToggle, btnSleepTimer;
+    private Button btnVolShortcutsMasterToggle, btnScreenOffVolToggle, btnSleepTimer, btnScheduledPlay;
     private Button btnPinResumeShortcut, btnPinShelfShortcut, btnPinFavShortcut, btnPinHistShortcut;
 
     private int libraryMode = 4; // Default to Bookshelves (4)
@@ -392,6 +397,23 @@ public class MainActivity extends AppCompatActivity {
     private long persistentSleepDurationMs = 0;
     private String persistentSleepLabel = "End of Track";
 
+    // Scheduled Playback Variables & Constants
+    public static final String ACTION_SCHEDULED_PLAY = "com.example.ktsadvancedmediaplayer.ACTION_SCHEDULED_PLAY";
+    public static final String EXTRA_SCHEDULED_PATH = "extra_scheduled_path";
+    public static final String EXTRA_SCHEDULED_TITLE = "extra_scheduled_title";
+    public static final String EXTRA_SCHEDULED_IS_CONTAINER = "extra_scheduled_is_container";
+    public static final String EXTRA_SCHEDULED_IS_ZIP = "extra_scheduled_is_zip";
+    private static final int REQUEST_CODE_SCHEDULED_PLAY = 9021;
+
+    private final Handler scheduledPlayHandler = new Handler(Looper.getMainLooper());
+    private Runnable scheduledPlayRunnable;
+    private boolean isScheduledPlayActive = false;
+    private long scheduledPlayTimeMs = 0;
+    private String scheduledPlayPath = "";
+    private String scheduledPlayTitle = "";
+    private boolean scheduledPlayIsContainer = false;
+    private boolean scheduledPlayIsZip = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -408,6 +430,17 @@ public class MainActivity extends AppCompatActivity {
 
         instance = this;
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        );
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -645,6 +678,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        );
         handleIntent(intent);
     }
 
@@ -652,6 +695,18 @@ public class MainActivity extends AppCompatActivity {
         if (intent == null) return;
         String action = intent.getAction();
         String shortcutAction = intent.getStringExtra("shortcut_action");
+
+        if (ACTION_SCHEDULED_PLAY.equals(action)) {
+            intent.setAction(null);
+            String path = intent.getStringExtra(EXTRA_SCHEDULED_PATH);
+            String title = intent.getStringExtra(EXTRA_SCHEDULED_TITLE);
+            boolean isContainer = intent.getBooleanExtra(EXTRA_SCHEDULED_IS_CONTAINER, false);
+            boolean isZip = intent.getBooleanExtra(EXTRA_SCHEDULED_IS_ZIP, false);
+            if (path != null && !path.isEmpty()) {
+                executeScheduledPlay(path, title, isContainer, isZip);
+            }
+            return;
+        }
 
         if (MediaNotificationManager.ACTION_PLAY_PAUSE.equals(action)) {
             handleNotificationPlayPause();
@@ -1192,6 +1247,7 @@ public class MainActivity extends AppCompatActivity {
         btnVolDownLong = findViewById(R.id.btnVolDownLong);
         btnVolDownDouble = findViewById(R.id.btnVolDownDouble);
         btnSleepTimer = findViewById(R.id.btnSleepTimer);
+        btnScheduledPlay = findViewById(R.id.btnScheduledPlay);
         btnPinResumeShortcut = findViewById(R.id.btnPinResumeShortcut);
         btnPinShelfShortcut = findViewById(R.id.btnPinShelfShortcut);
         btnPinFavShortcut = findViewById(R.id.btnPinFavShortcut);
@@ -1598,6 +1654,7 @@ public class MainActivity extends AppCompatActivity {
             isSleepEndOfTrack = true;
         }
         updateSleepTimerUI();
+        initScheduledPlayFromPrefs();
     }
 
     private void updateZipCacheUI() {
@@ -2726,6 +2783,7 @@ public class MainActivity extends AppCompatActivity {
 
         String[] options = new String[]{
                 "Share Track",
+                "Schedule Play",
                 "Set as Ringtone",
                 "Add to Favorites",
                 "Add to Playlist",
@@ -2752,24 +2810,28 @@ public class MainActivity extends AppCompatActivity {
                                 }
                             }
                             break;
-                        case 1: // Set as Ringtone
+                        case 1: // Schedule Play
+                            File npf = new File(currentPlayingFile);
+                            showSchedulePlayDialog(currentPlayingFile, tvNowPlaying.getText().toString(), false, ZipMediaManager.isZipFile(npf.getName()));
+                            break;
+                        case 2: // Set as Ringtone
                             setTrackAsRingtone(currentPlayingFile);
                             break;
-                        case 2: // Add to Favorites
+                        case 3: // Add to Favorites
                             libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
                             addToLibrary("favorites", currentPlayingFile);
                             Toast.makeText(MainActivity.this, "Track added to Favorites", Toast.LENGTH_SHORT).show();
                             announceAccessibility("Track added to favorites");
                             break;
-                        case 3: // Add to Playlist
+                        case 4: // Add to Playlist
                             libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
                             showPlaylistSelectionDialog(currentPlayingFile);
                             break;
-                        case 4: // Add to Book Shelf
+                        case 5: // Add to Book Shelf
                             libPrefs.edit().putString("title_" + currentPlayingFile, new File(currentPlayingFile).getName()).apply();
                             showBookShelfSelectionDialog(currentPlayingFile);
                             break;
-                        case 5: // Track Details
+                        case 6: // Track Details
                             showTimeDetails();
                             break;
                     }
@@ -4932,6 +4994,8 @@ public class MainActivity extends AppCompatActivity {
                 info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                         R.id.action_file_play, "Open Folder"));
                 info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                        R.id.action_file_schedule_play, "Schedule Play"));
+                info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                         R.id.action_add_to_queue, "Add Folder to Queue"));
                 info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                         R.id.action_file_favorite, "Add Folder to Favorites"));
@@ -4952,6 +5016,8 @@ public class MainActivity extends AppCompatActivity {
                 info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                         R.id.action_file_play, "Play Now"));
                 info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                        R.id.action_file_schedule_play, "Schedule Play"));
+                info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                         R.id.action_add_to_queue, "Add to Queue"));
                 info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                         R.id.action_file_favorite, "Add to Favorites"));
@@ -4970,6 +5036,8 @@ public class MainActivity extends AppCompatActivity {
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_play, "Play Now"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                    R.id.action_file_schedule_play, "Schedule Play"));
+            info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_add_to_queue, "Add to Queue"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_bookshelf, "Add to Book Shelf"));
@@ -4985,6 +5053,8 @@ public class MainActivity extends AppCompatActivity {
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_play, "Play Now"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                    R.id.action_file_schedule_play, "Schedule Play"));
+            info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_add_to_queue, "Add to Queue"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_favorite, "Add to Favorites"));
@@ -4999,6 +5069,8 @@ public class MainActivity extends AppCompatActivity {
         } else { // Playlist
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_play, "Play Now"));
+            info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                    R.id.action_file_schedule_play, "Schedule Play"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_add_to_queue, "Add to Queue"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
@@ -5056,6 +5128,10 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             playItemFromLibrary(position);
+            return true;
+        } else if (action == R.id.action_file_schedule_play) {
+            File f = new File(path);
+            showSchedulePlayDialog(path, name, f.isDirectory(), ZipMediaManager.isZipFile(f.getName()));
             return true;
         } else if (action == R.id.action_file_favorite) {
             libPrefs.edit().putString("title_" + path, name).apply();
@@ -5171,6 +5247,7 @@ public class MainActivity extends AppCompatActivity {
             List<String> optionsList = new ArrayList<>();
             if (libraryMode == 0 && historyFilterMode == 1) { // History Folders
                 optionsList.add(" Open Folder");
+                optionsList.add(" Schedule Play");
                 optionsList.add(" Add Folder to Queue");
                 optionsList.add(" Add to Favorites");
                 optionsList.add(" Add to Book Shelf");
@@ -5180,6 +5257,7 @@ public class MainActivity extends AppCompatActivity {
                 optionsList.add(" Remove from History");
             } else {
                 optionsList.add(" Play Now");
+                optionsList.add(" Schedule Play");
                 optionsList.add(" Add to Queue");
                 if (libraryMode == 0) { // History Tracks
                     optionsList.add(" Add to Favorites");
@@ -5212,6 +5290,8 @@ public class MainActivity extends AppCompatActivity {
                         String chosen = options[which];
                         if (chosen.contains("Play Now") || chosen.contains("Open Folder") || chosen.contains("Open Playlist")) {
                             handleLibraryAccessibilityAction(position, R.id.action_file_play);
+                        } else if (chosen.contains("Schedule Play")) {
+                            handleLibraryAccessibilityAction(position, R.id.action_file_schedule_play);
                         } else if (chosen.contains("Queue")) {
                             handleLibraryAccessibilityAction(position, R.id.action_add_to_queue);
                         } else if (chosen.contains("Favorites")) {
@@ -5298,6 +5378,8 @@ public class MainActivity extends AppCompatActivity {
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_pin, isPinned ? "Unpin Folder" : "Pin Folder to Top"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                    R.id.action_file_schedule_play, "Schedule Play"));
+            info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_add_to_queue, "Add Folder to Queue"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_folder_time_details, "Folder Duration Details"));
@@ -5324,6 +5406,8 @@ public class MainActivity extends AppCompatActivity {
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_play, "Play All Tracks"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                    R.id.action_file_schedule_play, "Schedule Play"));
+            info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_browse_zip, "Browse Tracks inside ZIP"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_add_to_queue, "Add ZIP to Queue"));
@@ -5346,6 +5430,8 @@ public class MainActivity extends AppCompatActivity {
         } else {
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_file_play, "Play Now"));
+            info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                    R.id.action_file_schedule_play, "Schedule Play"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
                     R.id.action_add_to_queue, "Add to Queue"));
             info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
@@ -5428,7 +5514,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         File f = new File(path);
-        if (action == R.id.action_file_pin) {
+        if (action == R.id.action_file_schedule_play) {
+            showSchedulePlayDialog(path, f.getName(), f.isDirectory(), ZipMediaManager.isZipFile(f.getName()));
+            return true;
+        } else if (action == R.id.action_file_pin) {
             if (f.isDirectory()) {
                 togglePinFolder(path);
                 loadDirectory(currentDir);
@@ -5560,7 +5649,7 @@ public class MainActivity extends AppCompatActivity {
         List<StorageInfo> allStorages = getAvailableStorageVolumes();
         for (StorageInfo s : allStorages) {
             if (path.equals(s.path) || path.equals(s.path + "/")) {
-                String[] rootOpts = {"Add to Favorites", "Add to Book Shelf"};
+                String[] rootOpts = {"Add to Favorites", "Add to Book Shelf", "Schedule Play"};
                 new AlertDialog.Builder(this)
                         .setTitle(s.name)
                         .setItems(rootOpts, (d, w) -> {
@@ -5568,6 +5657,8 @@ public class MainActivity extends AppCompatActivity {
                                 handleFileAccessibilityAction(position, R.id.action_file_favorite);
                             } else if (w == 1) {
                                 handleFileAccessibilityAction(position, R.id.action_file_bookshelf);
+                            } else if (w == 2) {
+                                showSchedulePlayDialog(path, s.name, true, false);
                             }
                         }).show();
                 return true;
@@ -5585,6 +5676,7 @@ public class MainActivity extends AppCompatActivity {
 
             String[] options = {
                     currentlyPinned ? "Unpin Folder" : "Pin Folder to Top",
+                    "Schedule Play",
                     "View Bookmarks",
                     "Add to Queue",
                     "Add to Favorites",
@@ -5598,7 +5690,9 @@ public class MainActivity extends AppCompatActivity {
                     .setTitle("Folder: " + f.getName())
                     .setItems(options, (dialog, which) -> {
                         String opt = options[which];
-                        if ("View Bookmarks".equals(opt)) {
+                        if ("Schedule Play".equals(opt)) {
+                            handleFileAccessibilityAction(position, R.id.action_file_schedule_play);
+                        } else if ("View Bookmarks".equals(opt)) {
                             showBookmarksDialogForScope(path, false, f.getName());
                         } else if (opt.contains("Pin Folder")) {
                             handleFileAccessibilityAction(position, R.id.action_file_pin);
@@ -5621,6 +5715,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (ZipMediaManager.isZipFile(f.getName())) {
             String[] options = {
                     "Play All Tracks",
+                    "Schedule Play",
                     "Browse Tracks inside ZIP",
                     "View Bookmarks",
                     "Add to Queue",
@@ -5637,6 +5732,8 @@ public class MainActivity extends AppCompatActivity {
                         String opt = options[which];
                         if ("Play All Tracks".equals(opt)) {
                             handleFileAccessibilityAction(position, R.id.action_file_play);
+                        } else if ("Schedule Play".equals(opt)) {
+                            handleFileAccessibilityAction(position, R.id.action_file_schedule_play);
                         } else if ("Browse Tracks inside ZIP".equals(opt)) {
                             handleFileAccessibilityAction(position, R.id.action_file_browse_zip);
                         } else if ("View Bookmarks".equals(opt)) {
@@ -5660,6 +5757,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             String[] options = {
                     "Play Now",
+                    "Schedule Play",
                     "View Bookmarks",
                     "Add to Queue",
                     "Add to Favorites",
@@ -5675,6 +5773,8 @@ public class MainActivity extends AppCompatActivity {
                         String opt = options[which];
                         if ("Play Now".equals(opt)) {
                             handleFileAccessibilityAction(position, R.id.action_file_play);
+                        } else if ("Schedule Play".equals(opt)) {
+                            handleFileAccessibilityAction(position, R.id.action_file_schedule_play);
                         } else if ("View Bookmarks".equals(opt)) {
                             String fPath = isBrowsingZip ? currentZipFilePath : (f.getParent() != null ? f.getParent() : currentDir);
                             boolean isZ = isBrowsingZip || ZipMediaManager.isZipFile(fPath);
@@ -6421,6 +6521,11 @@ public class MainActivity extends AppCompatActivity {
             updateSleepTimerUI();
         }
 
+        if (btnScheduledPlay != null) {
+            btnScheduledPlay.setOnClickListener(v -> showScheduledPlayManageDialog());
+            updateScheduledPlayUI();
+        }
+
         setupButtonAccessibilityActions();
 
         if (seekBarPlayback != null) {
@@ -6795,6 +6900,34 @@ public class MainActivity extends AppCompatActivity {
                         return true;
                     } else if (action == R.id.action_timer_cancel) {
                         turnOffSleepTimer();
+                        return true;
+                    }
+                    return super.performAccessibilityAction(host, action, args);
+                }
+            });
+        }
+
+        // 4b. Scheduled Play Button
+        if (btnScheduledPlay != null) {
+            ViewCompat.setAccessibilityDelegate(btnScheduledPlay, new AccessibilityDelegateCompat() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            R.id.action_file_schedule_play, "Manage scheduled playback"));
+                    if (isScheduledPlayActive) {
+                        info.addAction(new AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                                R.id.action_timer_cancel, "Cancel scheduled playback"));
+                    }
+                }
+
+                @Override
+                public boolean performAccessibilityAction(@NonNull View host, int action, Bundle args) {
+                    if (action == R.id.action_file_schedule_play) {
+                        showScheduledPlayManageDialog();
+                        return true;
+                    } else if (action == R.id.action_timer_cancel) {
+                        cancelScheduledPlay(true);
                         return true;
                     }
                     return super.performAccessibilityAction(host, action, args);
@@ -10407,6 +10540,360 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ==========================================
+    // SCHEDULED PLAYBACK IMPLEMENTATION
+    // ==========================================
+
+    private void initScheduledPlayFromPrefs() {
+        scheduledPlayTimeMs = memPrefs.getLong("scheduled_play_time", 0);
+        scheduledPlayPath = memPrefs.getString("scheduled_play_path", "");
+        scheduledPlayTitle = memPrefs.getString("scheduled_play_title", "");
+        scheduledPlayIsContainer = memPrefs.getBoolean("scheduled_play_is_container", false);
+        scheduledPlayIsZip = memPrefs.getBoolean("scheduled_play_is_zip", false);
+
+        if (scheduledPlayTimeMs > System.currentTimeMillis() && !scheduledPlayPath.isEmpty()) {
+            isScheduledPlayActive = true;
+            armScheduledPlayHandler();
+        } else if (scheduledPlayTimeMs > 0 && scheduledPlayTimeMs <= System.currentTimeMillis()) {
+            clearScheduledPlayPrefs();
+        }
+        updateScheduledPlayUI();
+    }
+
+    private void showSchedulePlayDialog(String path, String title, boolean isContainer, boolean isZip) {
+        if (path == null || path.isEmpty()) return;
+
+        List<String> options = new ArrayList<>();
+        if (isScheduledPlayActive && scheduledPlayTimeMs > System.currentTimeMillis()) {
+            String activeTimeStr = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(scheduledPlayTimeMs));
+            options.add("Cancel Active Schedule (" + activeTimeStr + ": " + scheduledPlayTitle + ")");
+        }
+        options.add("Select Exact Time (Clock)");
+        options.add("In 15 minutes");
+        options.add("In 30 minutes");
+        options.add("In 45 minutes");
+        options.add("In 1 hour");
+        options.add("In 2 hours");
+
+        String displayTitle = (title != null && !title.isEmpty()) ? title : new File(path).getName();
+        String dialogTitle = "Schedule Play: " + displayTitle;
+
+        new AlertDialog.Builder(this)
+                .setTitle(dialogTitle)
+                .setItems(options.toArray(new String[0]), (dialog, which) -> {
+                    String selected = options.get(which);
+                    if (selected.startsWith("Cancel Active Schedule")) {
+                        cancelScheduledPlay(true);
+                    } else if ("Select Exact Time (Clock)".equals(selected)) {
+                        promptTimePickerForSchedule(path, displayTitle, isContainer, isZip);
+                    } else if ("In 15 minutes".equals(selected)) {
+                        schedulePlaybackAt(System.currentTimeMillis() + 15 * 60 * 1000L, path, displayTitle, isContainer, isZip);
+                    } else if ("In 30 minutes".equals(selected)) {
+                        schedulePlaybackAt(System.currentTimeMillis() + 30 * 60 * 1000L, path, displayTitle, isContainer, isZip);
+                    } else if ("In 45 minutes".equals(selected)) {
+                        schedulePlaybackAt(System.currentTimeMillis() + 45 * 60 * 1000L, path, displayTitle, isContainer, isZip);
+                    } else if ("In 1 hour".equals(selected)) {
+                        schedulePlaybackAt(System.currentTimeMillis() + 60 * 60 * 1000L, path, displayTitle, isContainer, isZip);
+                    } else if ("In 2 hours".equals(selected)) {
+                        schedulePlaybackAt(System.currentTimeMillis() + 120 * 60 * 1000L, path, displayTitle, isContainer, isZip);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void promptTimePickerForSchedule(String path, String title, boolean isContainer, boolean isZip) {
+        Calendar now = Calendar.getInstance();
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+
+        TimePickerDialog timePicker = new TimePickerDialog(this, (view, hourOfDay, minute) -> {
+            Calendar target = Calendar.getInstance();
+            target.set(Calendar.HOUR_OF_DAY, hourOfDay);
+            target.set(Calendar.MINUTE, minute);
+            target.set(Calendar.SECOND, 0);
+            target.set(Calendar.MILLISECOND, 0);
+
+            if (target.getTimeInMillis() <= System.currentTimeMillis()) {
+                target.add(Calendar.DAY_OF_YEAR, 1);
+            }
+
+            schedulePlaybackAt(target.getTimeInMillis(), path, title, isContainer, isZip);
+        }, currentHour, currentMinute, android.text.format.DateFormat.is24HourFormat(this));
+
+        timePicker.setTitle("Schedule Playback Time");
+        timePicker.show();
+    }
+
+    private void schedulePlaybackAt(long triggerTimeMs, String path, String title, boolean isContainer, boolean isZip) {
+        cancelScheduledPlayInternal();
+
+        isScheduledPlayActive = true;
+        scheduledPlayTimeMs = triggerTimeMs;
+        scheduledPlayPath = path;
+        scheduledPlayTitle = title;
+        scheduledPlayIsContainer = isContainer;
+        scheduledPlayIsZip = isZip;
+
+        memPrefs.edit()
+                .putLong("scheduled_play_time", triggerTimeMs)
+                .putString("scheduled_play_path", path)
+                .putString("scheduled_play_title", title)
+                .putBoolean("scheduled_play_is_container", isContainer)
+                .putBoolean("scheduled_play_is_zip", isZip)
+                .apply();
+
+        armScheduledPlayAlarm(triggerTimeMs, path, title, isContainer, isZip);
+        armScheduledPlayHandler();
+        updateScheduledPlayUI();
+
+        String timeStr = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(triggerTimeMs));
+        String msg = "Playback scheduled for " + timeStr + " (" + title + ")";
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        announceAccessibility(msg);
+    }
+
+    private void armScheduledPlayAlarm(long triggerTimeMs, String path, String title, boolean isContainer, boolean isZip) {
+        try {
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+
+            Intent broadcastIntent = new Intent(this, MediaActionReceiver.class);
+            broadcastIntent.setAction(ACTION_SCHEDULED_PLAY);
+            broadcastIntent.putExtra(EXTRA_SCHEDULED_PATH, path);
+            broadcastIntent.putExtra(EXTRA_SCHEDULED_TITLE, title);
+            broadcastIntent.putExtra(EXTRA_SCHEDULED_IS_CONTAINER, isContainer);
+            broadcastIntent.putExtra(EXTRA_SCHEDULED_IS_ZIP, isZip);
+
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                flags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+
+            PendingIntent pi = PendingIntent.getBroadcast(
+                    this,
+                    REQUEST_CODE_SCHEDULED_PLAY,
+                    broadcastIntent,
+                    flags
+            );
+
+            Intent showIntent = new Intent(this, MainActivity.class);
+            showIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent showPi = PendingIntent.getActivity(
+                    this,
+                    REQUEST_CODE_SCHEDULED_PLAY,
+                    showIntent,
+                    flags
+            );
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerTimeMs, showPi);
+                am.setAlarmClock(clockInfo, pi);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMs, pi);
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, triggerTimeMs, pi);
+            }
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error arming scheduled play alarm", e);
+        }
+    }
+
+    private void armScheduledPlayHandler() {
+        if (scheduledPlayRunnable != null) {
+            scheduledPlayHandler.removeCallbacks(scheduledPlayRunnable);
+            scheduledPlayRunnable = null;
+        }
+        long delayMs = scheduledPlayTimeMs - System.currentTimeMillis();
+        if (delayMs <= 0) {
+            executeScheduledPlay(scheduledPlayPath, scheduledPlayTitle, scheduledPlayIsContainer, scheduledPlayIsZip);
+            return;
+        }
+        scheduledPlayRunnable = () -> {
+            if (isScheduledPlayActive) {
+                executeScheduledPlay(scheduledPlayPath, scheduledPlayTitle, scheduledPlayIsContainer, scheduledPlayIsZip);
+            }
+        };
+        scheduledPlayHandler.postDelayed(scheduledPlayRunnable, delayMs);
+    }
+
+    private void cancelScheduledPlayInternal() {
+        isScheduledPlayActive = false;
+        scheduledPlayTimeMs = 0;
+        scheduledPlayPath = "";
+        scheduledPlayTitle = "";
+        scheduledPlayIsContainer = false;
+        scheduledPlayIsZip = false;
+
+        if (scheduledPlayRunnable != null) {
+            scheduledPlayHandler.removeCallbacks(scheduledPlayRunnable);
+            scheduledPlayRunnable = null;
+        }
+
+        try {
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (am != null) {
+                Intent intent = new Intent(this, MediaActionReceiver.class);
+                intent.setAction(ACTION_SCHEDULED_PLAY);
+                int flags = PendingIntent.FLAG_NO_CREATE;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    flags |= PendingIntent.FLAG_IMMUTABLE;
+                }
+                PendingIntent pi = PendingIntent.getBroadcast(
+                        this,
+                        REQUEST_CODE_SCHEDULED_PLAY,
+                        intent,
+                        flags
+                );
+                if (pi != null) {
+                    am.cancel(pi);
+                    pi.cancel();
+                }
+            }
+        } catch (Exception ignored) {}
+
+        clearScheduledPlayPrefs();
+        updateScheduledPlayUI();
+    }
+
+    private void clearScheduledPlayPrefs() {
+        memPrefs.edit()
+                .remove("scheduled_play_time")
+                .remove("scheduled_play_path")
+                .remove("scheduled_play_title")
+                .remove("scheduled_play_is_container")
+                .remove("scheduled_play_is_zip")
+                .apply();
+    }
+
+    public void cancelScheduledPlay(boolean announce) {
+        cancelScheduledPlayInternal();
+        if (announce) {
+            Toast.makeText(this, "Scheduled playback canceled", Toast.LENGTH_SHORT).show();
+            announceAccessibility("Scheduled playback canceled");
+        }
+    }
+
+    private void showScheduledPlayManageDialog() {
+        if (!isScheduledPlayActive || scheduledPlayTimeMs <= System.currentTimeMillis() || scheduledPlayPath.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Scheduled Play")
+                    .setMessage("No playback is currently scheduled.\n\nTo schedule playback, long-press any folder, ZIP archive, or audio track, or select 'Schedule Play' from its custom action menu.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+
+        String timeStr = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(scheduledPlayTimeMs));
+        long diffMs = scheduledPlayTimeMs - System.currentTimeMillis();
+        long minutes = Math.max(1, (diffMs + 59999) / 60000);
+
+        String message = "Target: " + scheduledPlayTitle + "\nScheduled Time: " + timeStr + " (in " + minutes + " min)";
+
+        new AlertDialog.Builder(this)
+                .setTitle("Active Scheduled Playback")
+                .setMessage(message)
+                .setPositiveButton("Keep", null)
+                .setNegativeButton("Cancel Schedule", (d, w) -> cancelScheduledPlay(true))
+                .show();
+    }
+
+    private void updateScheduledPlayUI() {
+        if (btnScheduledPlay == null) return;
+        ThemeManager.ThemeItem theme = ThemeManager.getCurrentTheme(this);
+        if (isScheduledPlayActive && scheduledPlayTimeMs > System.currentTimeMillis() && !scheduledPlayPath.isEmpty()) {
+            String timeStr = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(scheduledPlayTimeMs));
+            long diffMs = scheduledPlayTimeMs - System.currentTimeMillis();
+            long minutes = Math.max(1, (diffMs + 59999) / 60000);
+            btnScheduledPlay.setText("Scheduled Play: " + timeStr + " (" + minutes + "m left)");
+            btnScheduledPlay.setContentDescription("Scheduled playback active. Playing " + scheduledPlayTitle + " at " + timeStr + ", " + minutes + " minutes remaining. Tap to manage.");
+            btnScheduledPlay.setBackgroundColor(theme.primaryColor);
+        } else {
+            btnScheduledPlay.setText("Scheduled Play: OFF");
+            btnScheduledPlay.setContentDescription("Scheduled playback is off. Tap to check status.");
+            btnScheduledPlay.setBackgroundColor(theme.buttonColor);
+        }
+    }
+
+    public void executeScheduledPlay(String path, String title, boolean isContainer, boolean isZip) {
+        cancelScheduledPlayInternal();
+        wakeUpDeviceAndScreen();
+
+        if (mediaPlayer == null) {
+            setupMediaPlayer();
+        }
+
+        if (path == null || path.isEmpty()) return;
+
+        File targetFile = new File(path);
+        if (!targetFile.exists()) {
+            announceAccessibility("Scheduled playback failed: File not found");
+            Toast.makeText(this, "File not found for scheduled playback", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String displayTitle = (title != null && !title.isEmpty()) ? title : targetFile.getName();
+        announceAccessibility("Starting scheduled playback: " + displayTitle);
+        Toast.makeText(this, "Playing scheduled: " + displayTitle, Toast.LENGTH_SHORT).show();
+
+        if (isZip || ZipMediaManager.isZipFile(targetFile.getName())) {
+            switchTab(1);
+            playZipFile(targetFile, 0);
+        } else if (isContainer || targetFile.isDirectory()) {
+            switchTab(1);
+            playFolderTracks(targetFile, 0);
+        } else {
+            switchTab(1);
+            File parent = targetFile.getParentFile();
+            if (parent != null && parent.exists() && parent.isDirectory()) {
+                currentAudioList.clear();
+                File[] files = parent.listFiles();
+                if (files != null) {
+                    Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+                    for (File child : files) {
+                        if (!child.isDirectory() && ZipMediaManager.isAudioFile(child.getName())) {
+                            currentAudioList.add(child.getAbsolutePath());
+                        }
+                    }
+                }
+            }
+            playAudioFile(path);
+        }
+    }
+
+    private void wakeUpDeviceAndScreen() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                @SuppressWarnings("deprecation")
+                PowerManager.WakeLock wl = pm.newWakeLock(
+                        PowerManager.FULL_WAKE_LOCK |
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP |
+                        PowerManager.ON_AFTER_RELEASE,
+                        "KTSMediaPlayer:ScheduledPlaybackWake"
+                );
+                wl.acquire(10000);
+            }
+        } catch (Exception ignored) {}
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+            try {
+                KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+                if (km != null) {
+                    km.requestDismissKeyguard(this, null);
+                }
+            } catch (Exception ignored) {}
+        }
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        );
+    }
+
     private void setupBackNavigation() {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -10524,6 +11011,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         isAppInForeground = true;
+
+        if (ScheduledPlaybackService.isPlaying()) {
+            ScheduledPlaybackService schedService = ScheduledPlaybackService.getInstance();
+            if (schedService != null) {
+                String schedPath = schedService.getCurrentPlayingPath();
+                long schedPos = schedService.getCurrentPosition();
+                schedService.stopPlaybackAndRelease();
+                if (schedPath != null && !schedPath.isEmpty()) {
+                    executePlayAudioFile(schedPath, schedPos);
+                }
+            }
+        }
+
         if (currentEarMode == EAR_MODE_AUTO || currentEarMode == EAR_MODE_ON) {
             registerProximitySensor();
             if (currentEarMode == EAR_MODE_ON) {
@@ -10710,6 +11210,7 @@ public class MainActivity extends AppCompatActivity {
         updateAudioSeparationButtonUI();
         updateEarSpeakerButtonUI();
         updateAutoCheckUpdateUI();
+        updateScheduledPlayUI();
     }
 
     private void updateAutoCheckUpdateUI() {
@@ -10746,6 +11247,10 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         saveCurrentPosition();
         cancelSleepTimer();
+        if (scheduledPlayRunnable != null) {
+            scheduledPlayHandler.removeCallbacks(scheduledPlayRunnable);
+            scheduledPlayRunnable = null;
+        }
         if (volumeContentObserver != null) {
             try { getContentResolver().unregisterContentObserver(volumeContentObserver); } catch (Exception ignored) {}
             volumeContentObserver = null;

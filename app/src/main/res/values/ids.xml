@@ -19,6 +19,7 @@
     <item type="id" name="action_file_remove_from_lib" />
     <item type="id" name="action_add_to_queue" />
     <item type="id" name="action_view_queue" />
+    <item type="id" name="action_file_schedule_play" />
 
     <!-- Forward & Rewind Seek Granular Actions -->
     <item type="id" name="action_seek_fwd_5" />
